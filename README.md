@@ -4,6 +4,8 @@ This repository includes subdirectories relating to my own personal projects in 
 
 The code in this repo refers to NEMO v4.0.4 from the [forge.ipsl directory](https://forge.ipsl.jussieu.fr/nemo/svn/NEMO/releases/r4.0/r4.0.4/). One can obtain the source files by using `svn co ...`. A more up-to-date NEMO version (v4.2) is available on [GitLab](https://forge.nemo-ocean.eu/nemo/nemo).
 
+A brief outline is given below of what is included in each subdirectory. Further information is found in each subdirectory, withd details given in each respective `documentation.md`.
+
 **IDEAL**
 - In `/IDEAL`, there are `src`, `EXP`, `tools`, and `scripts` for the idealised channel model configuration.
 - The `/scripts` folder contains bash scripts for automating job submissions on Monsoon2, along with python scripts for setting up the model and also analysing model output.
@@ -16,3 +18,4 @@ The code in this repo refers to NEMO v4.0.4 from the [forge.ipsl directory](http
 The Leith schemes are still very much in the testing stage and are prone to errors!
 
 **ORCA025**
+Work will begin soon...
