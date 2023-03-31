@@ -1,6 +1,8 @@
 # NEMO_activities
 
-This repository will include my activities in the NEMO ocean model.
+This repository includes subdirectories relating to my own personal projects in the NEMO code. The intention is for anyone to reproduce the work set out here. It is also still a work in progress.
+
+The code in this repo refers to NEMO v4.0.4 from the [forge.ipsl directory](https://forge.ipsl.jussieu.fr/nemo/svn/NEMO/releases/r4.0/r4.0.4/). One can obtain the source files by using `svn co ...`. A more up-to-date NEMO version (v4.2) is available on [GitLab](https://forge.nemo-ocean.eu/nemo/nemo).
 
 **IDEAL**
 - In `/IDEAL`, there are `src`, `EXP`, `tools`, and `scripts` for the idealised channel model configuration.
