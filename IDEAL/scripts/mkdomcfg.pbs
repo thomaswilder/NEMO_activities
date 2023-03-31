@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#PBS -N mkdom_IDEAL
+#PBS -q shared
+#PBS -l select=1:ncpus=1
+#PBS -l walltime=01:00:00
+
+cd $PBS_O_WORKDIR
+
+module load cray-snplauncher/7.0.4
+mpiexec ./make_domain_cfg.exe

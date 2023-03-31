@@ -1,0 +1,123 @@
+#!/bin/bash
+#
+# Script Name: jobnamup.pbs
+#
+# Author: T.Wilder
+# Date: 20/03/2023
+#
+# Description: This script updates the nemo namelist_cfg file for the next simulation pickup on Monsoon2. The script also tidies up model output files, putting them in /OUTPUTS/ and /RESTARTS/
+#
+# Run Information: This script is run in sequence with jobnemo.pbs once jobnemo.pbs exits with zero errors. The execution can be found in jobNnemo.sh
+#
+#!
+##jobnamup.pbs
+#PBS -N postproc
+#PBS -q shared
+#PBS -l select=1:ncpus=1
+#PBS -l walltime=01:00:00
+#PBS -o postproc.output 
+#PBS -e postproc.error 
+
+cd $PBS_O_WORKDIR
+
+# local shell variables
+BASE_DIR=$HOME/NEMO/NEMO_4.0.4_mirror
+OCEANCORES=240 #Number of cores used (30 per node running NEMO)
+NUM_XIOS=7
+EXPNAM=EXPH10
+MODEL=IDEAL
+TSTEPS=38880
+
+# ----------------------------------------------------------------------------------
+# --------------------------- Function(s) ------------------------------------------
+# ----------------------------------------------------------------------------------
+
+next_namelist () {
+	export TS_INCREMENT=$1
+	
+	# first time step
+	export INIT_STARTTS_STR=$(grep -ri "nn_it000" namelist_cfg)
+	export INIT_STARTTS=$(echo ${INIT_STARTTS_STR} | sed -e 's/[^0-9]*//g' | awk '{print $NF}')
+	export INIT_STARTTS=$(echo ${INIT_STARTTS} | sed 's/^0*//')
+	export NEW_STARTTS=$((INIT_STARTTS + TS_INCREMENT))
+	export NEW_STARTTS_STR=$(echo "${INIT_STARTTS_STR}" | sed -e "s/${INIT_STARTTS}/${NEW_STARTTS}/g")
+	sed -i "s/${INIT_STARTTS_STR}/${NEW_STARTTS_STR}/g" namelist_cfg
+
+	# last time step
+	export INIT_ENDTS_STR=$(grep -ri "nn_itend" namelist_cfg)
+	export INIT_ENDTS=$(echo ${INIT_ENDTS_STR} | sed -e 's/[^0-9]*//g' | awk '{print $NF}')
+	export NEW_ENDTS=$((INIT_ENDTS + TS_INCREMENT))
+	export NEW_ENDTS_STR=$(echo "${INIT_ENDTS_STR}" | sed -e "s/${INIT_ENDTS}/${NEW_ENDTS}/g")
+	sed -i "s/${INIT_ENDTS_STR}/${NEW_ENDTS_STR}/g" namelist_cfg
+	
+	# restart frequency
+	export INIT_STOCK_STR=$(grep -ri "nn_stock" namelist_cfg)
+	export INIT_STOCK=$(echo ${INIT_STOCK_STR} | sed -e 's/[^0-9]*//g' | awk '{print $NF}')
+	export NEW_STOCK=$((INIT_STOCK + TS_INCREMENT))
+	export NEW_STOCK_STR=$(echo "${INIT_STOCK_STR}" | sed -e "s/${INIT_STOCK}/${NEW_STOCK}/g")
+	sed -i "s/${INIT_STOCK_STR}/${NEW_STOCK_STR}/g" namelist_cfg
+
+	# update the start date
+	export OLD_DATE_STR=$(grep -ri "nn_date0" namelist_cfg)
+	export OLD_DATE_NUM=$(echo ${OLD_DATE_STR} | sed -e 's/[^0-9]*//g' | awk '{print $NF}')
+	export OLD_DATE_NUM=$(echo ${OLD_DATE_NUM} | sed 's/^0*//')
+	export NEW_DATE_NUM=$(echo $(ls -d ${MODEL}_*_grid_T_0000.nc) | awk -F _ '{print $4 }')
+	export NEW_DATE_NUM=$(echo ${NEW_DATE_NUM} | sed 's/^0*//')
+	sed -i "s/${OLD_DATE_NUM}/${NEW_DATE_NUM}/g" namelist_cfg
+
+	# pick up from restart file after first period of simulation
+    export OLD_RESTART_STR=$(grep -ri "ln_rstart" namelist_cfg)
+    if [[ $OLD_RESTART_STR == *".false."* ]]; then
+    	NEW_RESTART_STR=$(echo "${OLD_RESTART_STR}" | sed -e 's/.false./.true. /g')
+    	sed -i "s/${OLD_RESTART_STR}/${NEW_RESTART_STR}/g" namelist_cfg
+    	echo "swapped"
+    else		
+    	echo "It's there!"
+    fi	
+}
+
+
+# ----------------------------------------------------------------------------------
+# ---------------------------------- Main ------------------------------------------
+# ----------------------------------------------------------------------------------
+
+# Tidy up restart files
+export RES_TIMESTAMP=$(echo $(ls -d ${MODEL}_*_restart_0000.nc) | awk -F _ '{print $2 }')
+$BASE_DIR/tools/REBUILD_NEMO/rebuild_nemo ${MODEL}_${RES_TIMESTAMP}_restart ${OCEANCORES}
+
+# delete original restart files and rename restart file
+rm -v ${MODEL}_${RES_TIMESTAMP}_restart_*.nc
+cp ${MODEL}_${RES_TIMESTAMP}_restart.nc RESTARTS/
+mv ${MODEL}_${RES_TIMESTAMP}_restart.nc restart.nc
+
+# Update namelist_cfg for next simulation pickup, calling function defined above
+next_namelist $TSTEPS
+
+# Now, combine the output diagnostic files
+OUT_FREQ=$(echo $(ls -d ${MODEL}_*_grid_T_0000.nc) | awk -F _ '{print $2 }')
+OUT_START=$(echo $(ls -d ${MODEL}_*_grid_T_0000.nc) | awk -F _ '{print $3 }')
+OUT_END=$(echo $(ls -d ${MODEL}_*_grid_T_0000.nc) | awk -F _ '{print $4 }')
+
+for val in ${OUT_FREQ[@]}; do
+	# use rebuild_nemo to combine output files
+	$BASE_DIR/tools/REBUILD_NEMO/rebuild_nemo ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_T $NUM_XIOS
+	$BASE_DIR/tools/REBUILD_NEMO/rebuild_nemo ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_U $NUM_XIOS
+	$BASE_DIR/tools/REBUILD_NEMO/rebuild_nemo ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_V $NUM_XIOS
+	$BASE_DIR/tools/REBUILD_NEMO/rebuild_nemo ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_W $NUM_XIOS
+
+	# move files into OUTPUTS folder
+	mv ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_T.nc $BASE_DIR/cfgs/$MODEL/$EXPNAM/OUTPUTS
+	mv ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_U.nc $BASE_DIR/cfgs/$MODEL/$EXPNAM/OUTPUTS
+	mv ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_V.nc $BASE_DIR/cfgs/$MODEL/$EXPNAM/OUTPUTS
+	mv ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_W.nc $BASE_DIR/cfgs/$MODEL/$EXPNAM/OUTPUTS
+
+	# delete remaining output files in exp folder
+	rm -v ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_T_*.nc
+	rm -v ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_U_*.nc 
+	rm -v ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_V_*.nc 
+	rm -v ${MODEL}_${OUT_FREQ}_${OUT_START}_${OUT_END}_grid_W_*.nc 
+done
+
+# tidy up the file space, remove unecessary files
+rm -v nam_rebuild*
+rm -v submit*.pbs.*

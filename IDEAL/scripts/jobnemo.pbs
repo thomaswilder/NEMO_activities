@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# Script Name: jobnemo.pbs
+#
+# Author: T.Wilder
+# Date: 20/03/2023
+#
+# Description: This script executes nemo
+#
+# Run Information: This script is run sequentially with jobnamup.pbs, and its execution can be found in jobNnemo.sh
+#
+#!
+##jobnemo.pbs
+#PBS -q normal
+#PBS -A twilder
+#PBS -m ae
+#PBS -M t.m.wilder@reading.ac.uk
+#PBS -l select=3 
+#PBS -l walltime=04:00:00
+#PBS -N IDEAL 
+#PBS -o testing.output 
+#PBS -e testing.error 
+#PBS -j oe
+#PBS -V
+
+cd $HOME/NEMO/NEMO_4.0.4_mirror/cfgs/IDEAL/EXPH10/
+
+echo " _ __   ___ _ __ ___   ___           "
+echo "| '_ \ / _ \ '_ ' _ \ / _ \          "
+echo "| | | |  __/ | | | | | (_) |         "
+echo "|_| |_|\___|_| |_| |_|\___/  v4.0.4  "
+
+export OCEANCORES=60 #Number of cores used (30 per node running NEMO) 
+export XIOSCORES=2 #Number of cores to run XIOS (=number of nodes running NEMO)
+
+ulimit -c unlimited
+ulimit -s unlimited
+
+aprun -b -n $XIOSCORES -N 2 ./xios_server.exe : -n $OCEANCORES -N 30 ./nemo
+
+
