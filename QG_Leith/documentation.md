@@ -139,3 +139,20 @@ Examining the QG Leith output in MATLAB:
 - Diagnose `tmpzstx` in the routine and output.
 
 Model is not running...?
+
+### 3rd April
+Model not running because used incorrect indices in `tmpzstx` allocation in `ldfdyn.F90`
+
+The code is working, but there are patches where the stretching values are just too large.
+- Adding in Coriolis parameter to QG vorticity.
+
+What is the mixed layer depth? Output the index. Use `hmlpt` instead, which is the depth of last T-point inside the mixed layer [m].
+- Adding `mld_dt02` to `file_def_nemo.xml` to output mixed layer depth.
+
+Using `mld_dt02` to define the mixed layer depth in `ldfdyn.F90`. No, the use of `nmln` is correct.
+
+The scheme that Pearson implemented does not smoothly transition from the QG to 2D regime. Recall we had issues with the Bachman scheme.
+
+So:
+- Really large vertical vorticity gradients at the 2D/QG transition boundary. Difficult to understand why?
+
