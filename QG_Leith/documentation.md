@@ -154,5 +154,16 @@ Using `mld_dt02` to define the mixed layer depth in `ldfdyn.F90`. No, the use of
 The scheme that Pearson implemented does not smoothly transition from the QG to 2D regime. Recall we had issues with the Bachman scheme.
 
 So:
-- Really large vertical vorticity gradients at the 2D/QG transition boundary. Difficult to understand why?
+- Really large vertical vorticity gradients and stretching at the 2D/QG transition boundary. Difficult to understand why?
 
+
+### 4th April
+Will remove `ff_f` and see if $partial_x q_2$ is the same? And also IF ELSE Statement around line 781, to check if strange lines are still present.
+- Lines gone.
+Vorticity should not have a condition in, so  $q_2 = f + \zeta$ for all space.
+
+On examination, looks like the Burger number needs a minimum $N^2$? Do this.
+
+But also, looks like QG scheme is calculating stretching when it shouldn't be. E.g. at depth 1000 m (z=20) grid points 310:322, 15:22, when it should be in the 2D Leith regime. We are outputting `mld_dt02` which is the mixed layer depending on temperature. Probably don't want to rely on this form. Instead:
+- Output different mixed layer depth diagnostics e.g. `mldr10_3`, `mldr0_1`.
+- Possibly try these as a new condition in the QG Leith scheme, depending on above.

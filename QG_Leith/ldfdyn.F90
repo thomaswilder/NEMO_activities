@@ -614,11 +614,11 @@ CONTAINS
             ! allocate local variables !
             zcm2dl = (rn_c2dc/rpi)**6        			! (C_2d/pi)^6
             !
-            !== calculate relative vorticity (zeta) on f-point ==!
+            !== calculate vertical vorticity (f + zeta) on f-point ==!
             DO jk = 1, jpkm1                                 ! Horizontal slab
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1   ! vector opt.
-                     zwz(ji,jj,jk) = ( e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
+                     zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
                         &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
                   END DO
                END DO
@@ -782,14 +782,14 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1   ! vector opt.
                      !== are we in the mixed layer or at the ocean bottom? ==!
-                     IF( jk <= nmln(ji,jj) .OR. jk == jpkm1 ) THEN
-                        zwz(ji,jj,jk) = (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
-                           &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-                     ELSE
-                        !== are we below the mixed layer? ff_f(ji,jj) + meridional gradient? ==!
-                        zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
-                           &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-                     ENDIF
+!                     IF( jk <= nmln(ji,jj) .OR. jk == jpkm1 ) THEN
+                     zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
+                        &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+!                     ELSE
+!                        !== are we below the mixed layer? ff_f(ji,jj) + meridional gradient? ==!
+!                        zwz(ji,jj,jk) = (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
+!                           &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+!                     ENDIF
                   END DO
                END DO
             END DO
@@ -829,7 +829,8 @@ CONTAINS
                         znsq = pn2(ji,jj,jk)
                      ENDIF
                      !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-                     rbu(ji,jj,jk) = ( znsq * e3t_n(ji,jj,jk)**2 ) / ( ff_t(ji,jj)**2 * esqt(ji,jj) )
+                     rbu(ji,jj,jk) = ( MAX( znsq, zqglep1 )  * e3t_n(ji,jj,jk)**2 ) /    &
+                        &  ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
                   END DO
                END DO
             END DO
