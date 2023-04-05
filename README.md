@@ -9,6 +9,7 @@ A brief outline is given below of what is included in each subdirectory. Further
 **IDEAL**
 - In `/IDEAL`, there are `src`, `EXP`, `tools`, and `scripts` for the idealised channel model configuration.
 - The `/scripts` folder contains bash scripts for automating job submissions on Monsoon2, along with python scripts for setting up the model and also analysing model output.
+- `/pyCDFTOOLS` contains specific functions to analyse model output. See [J. Mak GitHub repo](https://github.com/julianmak/NEMO-related/tree/master/pyCDFTOOLS) for additional `pyCDFTOOLS`.
 - A `documentation.md` file also exists that documents the trials and errors in setting up this configuration.
 
 **QG_Leith**
