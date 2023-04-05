@@ -20,7 +20,6 @@ MODULE ldfdyn
    USE ldfslp          ! lateral diffusion: slopes of mixing orientation
    USE ldfc1d_c2d      ! lateral diffusion: 1D and 2D cases
    USE eosbn2          ! equation of states: QG Leith
-!   USE divhor          ! Leith schemes
    USE zdfmxl          ! mixed layer depth: QG Leith
    !
    USE in_out_manager  ! I/O manager
@@ -84,6 +83,7 @@ MODULE ldfdyn
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   mld_qg       !: QG Leith mixed layer depth
 
    REAL(wp) ::   r1_2    = 0.5_wp            ! =1/2
    REAL(wp) ::   r1_4    = 0.25_wp           ! =1/4
@@ -385,7 +385,7 @@ CONTAINS
                &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,     &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,           &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                          &
-               &  tmpzstx(jpi,jpj,jpk) , STAT=ierr )
+               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
             !
             DO jj = 1, jpj             ! Set local gridscale values
@@ -414,6 +414,7 @@ CONTAINS
             rro2(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             tmpzstx(:,:,:) = 0._wp
+            mld_qg(:,:) = 0._wp
             !
          CASE DEFAULT
             CALL ctl_stop('ldf_dyn_init: wrong choice for nn_ahm_ijk_t, the type of space-time variation of ahm')
@@ -699,6 +700,15 @@ CONTAINS
             zcmqgl = (rn_cqgc/rpi)**6         			! (C_qg/pi)^6
             zqglep1 = 1.e-12_wp
             zqglep2 = 1.e-24_wp
+            !
+            DO jk = 1, jpkm1
+               DO jj = 1, jpjm1
+                  DO ji = 1, jpim1
+                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
+                  END DO
+               END DO
+            END DO
+            !
             !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
             !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
             !== begin calculation of stretching term d/dz[(f/(N**2))*b] ==!
@@ -759,7 +769,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < jpkm1 ) THEN
                         !== vertical gradient of x component ==!
                         zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                         zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
@@ -843,7 +853,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < jpkm1 ) THEN
                		   !== x component of stretching ==!
                         zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
                            &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
@@ -927,18 +937,19 @@ CONTAINS
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
          !== QG Leith diagnostics ==!
-         CALL iom_put( "rro2", rro2(:,:,:) )         ! square of Rossby number T- point
-         CALL iom_put( "rbu", rbu(:,:,:) )           ! Burger number T- point
-         CALL iom_put( "zstx", zstx(:,:,:) )         ! x component of QG stretching T- point
-         CALL iom_put( "zsty", zsty(:,:,:) )         ! y component of QG stretching T- point
+         CALL iom_put( "rro2"   , rro2(:,:,:) )      ! square of Rossby number T- point
+         CALL iom_put( "rbu"    , rbu(:,:,:) )       ! Burger number T- point
+         CALL iom_put( "zstx"   , zstx(:,:,:) )      ! x component of QG stretching T- point
+         CALL iom_put( "zsty"   , zsty(:,:,:) )      ! y component of QG stretching T- point
          CALL iom_put( "zstlimx", zstlimx(:,:,:) )   ! x component of QG stretching T- point
          CALL iom_put( "zstlimy", zstlimy(:,:,:) )   ! y component of QG stretching T- point
-         CALL iom_put( "zwzdx", zwzdx(:,:,:) )       ! x component of vorticity gradient T- point
-         CALL iom_put( "zwzdy", zwzdy(:,:,:) )       ! y component of vorticity gradient T- point
-         CALL iom_put( "zwz", zwz(:,:,:) )           ! QG vorticity at F- point
-         CALL iom_put( "zbudx", zbudx(:,:,:) )       ! x component of buoyancy gradient T- point
-         CALL iom_put( "zbudy", zbudy(:,:,:) )       ! y component of buoyancy gradient T- point
+         CALL iom_put( "zwzdx"  , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
+         CALL iom_put( "zwzdy"  , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
+         CALL iom_put( "zwz"    , zwz(:,:,:) )       ! QG vorticity at F- point
+         CALL iom_put( "zbudx"  , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
+         CALL iom_put( "zbudy"  , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
          CALL iom_put( "tmpzstx", tmpzstx(:,:,:) )   ! temp QG Leith stretching term
+         CALL iom_put( "mld_qg" , mld_qg(:,:) )      ! QG Leith mixed layer depth
          !
       END SELECT
       !

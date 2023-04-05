@@ -167,3 +167,22 @@ On examination, looks like the Burger number needs a minimum $N^2$? Do this.
 But also, looks like QG scheme is calculating stretching when it shouldn't be. E.g. at depth 1000 m (z=20) grid points 310:322, 15:22, when it should be in the 2D Leith regime. We are outputting `mld_dt02` which is the mixed layer depending on temperature. Probably don't want to rely on this form. Instead:
 - Output different mixed layer depth diagnostics e.g. `mldr10_3`, `mldr0_1`.
 - Possibly try these as a new condition in the QG Leith scheme, depending on above.
+- See `src/OCE/DIA/diahth.F90` for MLD calculation.
+
+
+### 5th April
+Trying to figure out how to output the vertical level of the mixed layer depth.
+- Editing `zdfmxl.F90` to output `nmln`? Can an integer be used in `iom_put`?
+
+Can we assign the depth at level of mixed layer and output that as a diagnostic?
+
+Have computed QG mixed layer depth in `ldfdyn.F90` and reverted `zdfmxl.F90` back to its original. Check model output... 
+- `mldr10_3` is deeper than `mldt02` in places.
+- Where the QG Leith scheme fails is due to the depth of the mixed layer, which is being chosen incorrectly.
+
+Outputting `mldr10_1` to see if it compares with `mld_qg`. Yes it does. 
+
+So, going to modify `zdfmxl.F90` to output a mixed layer depth with `rho_c = 0.03`. A slightly larger mixed layer criterion. 
+- Added in `nmln3` and made it public, but compile error saying `nmln3` must have an explicit type...
+
+Posted a thread on NEMO discourse about this issue.
