@@ -84,6 +84,8 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   mld_qg       !: QG Leith mixed layer depth
+   REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   zrho10_3     !: mixed layer depth
+   REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   nmlnqg       !: number of levels in mixed layer
 
    REAL(wp) ::   r1_2    = 0.5_wp            ! =1/2
    REAL(wp) ::   r1_4    = 0.25_wp           ! =1/4
@@ -380,12 +382,12 @@ CONTAINS
             l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
             !
             !                          ! allocate arrays used in ldf_dyn. 
-            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,      &
-               &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,       &
-               &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,     &
-               &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,           &
-               &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                          &
-               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , STAT=ierr )
+            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
+               &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
+               &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,           &
+               &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
+               &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                                &
+               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) , STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
             !
             DO jj = 1, jpj             ! Set local gridscale values
@@ -457,15 +459,18 @@ CONTAINS
       !! ** action  :    ahmt, ahmf   updated at each time step
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt   ! time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd   ! in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2   ! Brunt-Vaisala frequency (locally ref.)
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! Brunt-Vaisala frequency (locally ref.)
+      REAL(wp)                               ::   zrho3   = 0.03_wp           ! density     criterion for mixed layer depth
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
+      INTEGER  ::   ikt          ! local integer (option 34)
       REAL(wp) ::   zu2pv2_ij_p1, zu2pv2_ij, zu2pv2_ij_m1, zemax   ! local scalar (option 31)
       REAL(wp) ::   zcmsmag, zstabf_lo, zstabf_up, zdelta, zdb     ! local scalar (option 32)
       REAL(wp) ::   zcm2dl, zsq2d , zztmpx, zztmpy                 ! local scalar (option 33)
       REAL(wp) ::   zcmqgl, zbuup, zbulw, zusq, znsq               ! local scalar (option 34)
       REAL(wp) ::   zker1, zker2, zqglep1, zqglep2, zsqqg          ! more local scalar (option 34)
+      REAL(wp) ::   zztmp, zzdep                                   ! temporary scalars inside do loop (option 34)
       !!----------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('ldf_dyn')
@@ -712,19 +717,31 @@ CONTAINS
             !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
             ! initialization
             zrho3 = 0.03_wp
+            nmlnqg(:,:)  = nlb10               ! Initialization to the number of w ocean point
             DO jj = 1, jpj
                DO ji = 1, jpi
                   zztmp = gdepw_n(ji,jj,mbkt(ji,jj)+1)
                   zrho10_3(ji,jj) = zztmp
                END DO
             END DO 
+            !
             ! ------------------------- !
             ! MLD: rho = rho10m + zrho3 !
             ! ------------------------- !
-
-
-
-
+            DO jk = jpkm1, nlb10, -1    ! loop from bottom to nlb10
+               DO jj = 1, jpj
+                  DO ji = 1, jpi
+                     ikt = mbkt(ji,jj)
+                     zzdep = gdepw_n(ji,jj,jk) * tmask(ji,jj,1)
+                     zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
+                     IF( zztmp > zrho3 ) THEN
+                        zrho10_3(ji,jj) = zzdep                              ! > 0.03
+                        nmlnqg(ji,jj) = MIN(jk, ikt) + 1                     ! Mixed layer level
+                     ENDIF
+                  END DO
+               END DO
+               END DO
+            !
             !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
             !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
             !== begin calculation of stretching term d/dz[(f/(N**2))*b] ==!
@@ -785,7 +802,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
                         !== vertical gradient of x component ==!
                         zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                         zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
@@ -847,7 +864,7 @@ CONTAINS
                      !== square of Rossby number U^2/(f^2 * A) ==!
                      rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * fmask(ji,jj,jk)
                      !== averaging square of buoyancy frequency onto t-grid ==!
-                     IF( jk < jpkm1 ) THEN
+                     IF( jk < mbkt(ji,jj) ) THEN
                         !== accounting for negative N^2 ==!
                         znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) )
                      ELSE
@@ -869,7 +886,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
                		   !== x component of stretching ==!
                         zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
                            &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
@@ -965,7 +982,7 @@ CONTAINS
          CALL iom_put( "zbudx"  , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
          CALL iom_put( "zbudy"  , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
          CALL iom_put( "tmpzstx", tmpzstx(:,:,:) )   ! temp QG Leith stretching term
-         CALL iom_put( "mld_qg" , mld_qg(:,:) )      ! QG Leith mixed layer depth
+         CALL iom_put( "mld_qg" , zrho10_3(:,:) )    ! QG Leith mixed layer depth
          !
       END SELECT
       !

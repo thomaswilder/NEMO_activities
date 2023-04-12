@@ -196,3 +196,10 @@ Is there anyway to incorporate `mldr10_3` into `ldfdyn`? This produces a deeper 
 - Modifying `rho_c` in `zdfmxl` then recompiling doesn't carry through to the `/Work` directory...?
 
 Write in `mldr10_3` code into QG Leith and use as mixed layer depth condition. Go through `diahth.F90` and add into `ldfdyn`.
+
+Written in a mixed layer depth calculation into the QG Leith routine... fingers crossed. 
+
+Model blows up around around depth of bump.
+- In the IF statements for below mixed layer, have changed the condition `jk < jpkm1` to `jk < ( mbkt(ji,jj) - 1 )`, since `mbkt` gives the index of bottom last T point in ocean, compared with `jpkm1`, which is the absolute bottom `k` index.
+- Successful run... 
+	- Improvement in some regions index range (467:475,21:25,5,1). 
