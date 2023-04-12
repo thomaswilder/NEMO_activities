@@ -186,3 +186,13 @@ So, going to modify `zdfmxl.F90` to output a mixed layer depth with `rho_c = 0.0
 - Added in `nmln3` and made it public, but compile error saying `nmln3` must have an explicit type...
 
 Posted a thread on NEMO discourse about this issue.
+
+### 12th April
+Lets check if the new mixed layer depth value actually works by modifying `rho_c=0.03`. Uploaded alternative `zdfmxl` and update `ldfdyn` accordingly.
+- Recompiling NEMO... good.
+- Now, running for 2 timesteps and examining QG Leith output... Mixed layer depth still not deep enough. 
+
+Is there anyway to incorporate `mldr10_3` into `ldfdyn`? This produces a deeper mixed layer.
+- Modifying `rho_c` in `zdfmxl` then recompiling doesn't carry through to the `/Work` directory...?
+
+Write in `mldr10_3` code into QG Leith and use as mixed layer depth condition. Go through `diahth.F90` and add into `ldfdyn`.

@@ -704,11 +704,27 @@ CONTAINS
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
-                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
+                     IF( jk <= nmln(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
                   END DO
                END DO
             END DO
             !
+            !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
+            ! initialization
+            zrho3 = 0.03_wp
+            DO jj = 1, jpj
+               DO ji = 1, jpi
+                  zztmp = gdepw_n(ji,jj,mbkt(ji,jj)+1)
+                  zrho10_3(ji,jj) = zztmp
+               END DO
+            END DO 
+            ! ------------------------- !
+            ! MLD: rho = rho10m + zrho3 !
+            ! ------------------------- !
+
+
+
+
             !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
             !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
             !== begin calculation of stretching term d/dz[(f/(N**2))*b] ==!
@@ -769,7 +785,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
                         !== vertical gradient of x component ==!
                         zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                         zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
@@ -853,7 +869,7 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < jpkm1 ) THEN
+                     IF( jk > nmln(ji,jj) .AND. jk < jpkm1 ) THEN
                		   !== x component of stretching ==!
                         zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
                            &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
