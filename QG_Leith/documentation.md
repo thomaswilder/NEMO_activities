@@ -215,4 +215,10 @@ The mixed layer depth and condition is now correct, but still issues persist.
 
 I think the issue lies in the value of the Burger/Rossby numbers. A small Burger number implies the system is dominated by rotation, not stratification. The Rossby number does reach values of 1.
 
-Boundary layer mixing scheme?
+Boundary layer mixing scheme? No.
+
+Looking at the smooth transition in Bachman that uses the Froude number.
+- Examining the values in MATLAB suggests the Froude number could improve the scaled stretching term. 
+- Running simulation with Froude number ... much improved, with maximum viscous coefficient of around 1500 m^2/s. Still seems big. 
+
+Lets try and run the model for 1 day.

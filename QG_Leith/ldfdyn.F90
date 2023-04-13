@@ -79,7 +79,7 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwzdx, zwzdy !: x and y components of horizontal gradients of vertical vorticity at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbu          !: Buoyancy at T- point (QG Leith)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2    !: Burger number and square of Rossby number at T- points (QG Leith)
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2    !: Burger number and square of Rossby and Froude number at T- points (QG Leith)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
@@ -386,7 +386,7 @@ CONTAINS
                &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
                &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,           &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
-               &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                                &
+               &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
                &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) , STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
             !
@@ -414,6 +414,7 @@ CONTAINS
             zwzdy(:,:,:) = 0._wp
             rbu(:,:,:) = 0._wp
             rro2(:,:,:) = 0._wp
+            rfr2(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             tmpzstx(:,:,:) = 0._wp
             mld_qg(:,:) = 0._wp
@@ -874,6 +875,8 @@ CONTAINS
                      !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
                      rbu(ji,jj,jk) = ( MAX( znsq, zqglep1 )  * e3t_n(ji,jj,jk)**2 ) /    &
                         &  ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+                     !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
+                     rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
                   END DO
                END DO
             END DO
@@ -889,15 +892,23 @@ CONTAINS
                      IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
                		   !== x component of stretching ==!
                         zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-                           &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
-                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
-                        tmpzstx(ji,jj,jk) = zwzdx(ji,jj,jk)/                                       &
-                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 )
+                           &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+                        tmpzstx(ji,jj,jk) = ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                 &
+                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 )
+!!                        zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
+!!                           &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
+!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
+!!                        tmpzstx(ji,jj,jk) = zwzdx(ji,jj,jk)/                                       &
+!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 )
                         zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
                         !== y component of stretching ==!
                         zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-                           &  ABS( ( zwzdy(ji,jj,jk) ) /                                           &
-                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
+                           &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+!!                        zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
+!!                           &  ABS( ( zwzdy(ji,jj,jk) ) /                                           &
+!!                          &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
                         zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
                      ENDIF
                   END DO
@@ -972,6 +983,7 @@ CONTAINS
          !== QG Leith diagnostics ==!
          CALL iom_put( "rro2"   , rro2(:,:,:) )      ! square of Rossby number T- point
          CALL iom_put( "rbu"    , rbu(:,:,:) )       ! Burger number T- point
+         CALL iom_put( "rfr2"   , rfr2(:,:,:) )      ! square of Froude number T- point
          CALL iom_put( "zstx"   , zstx(:,:,:) )      ! x component of QG stretching T- point
          CALL iom_put( "zsty"   , zsty(:,:,:) )      ! y component of QG stretching T- point
          CALL iom_put( "zstlimx", zstlimx(:,:,:) )   ! x component of QG stretching T- point

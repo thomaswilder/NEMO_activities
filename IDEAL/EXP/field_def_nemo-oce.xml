@@ -50,7 +50,8 @@
 	     
 	     <!-- QG Leith diagnostics -->
 	     <field id="rro2"         long_name=" square of Rossby number "                                    grid_ref="grid_T_3D"/>
-	     <field id="rbu"          long_name=" Burger number "                                              grid_ref="grid_T_3D"/>
+		  <field id="rbu"          long_name=" Burger number "                                              grid_ref="grid_T_3D"/>
+        <field id="rfr2"         long_name=" square of Froude number "                                    grid_ref="grid_T_3D"/>
 	     <field id="zstx"         long_name=" x component of QG stretching "          unit="1/(m s)"       grid_ref="grid_T_3D"/>
 	     <field id="zsty"         long_name=" y component of QG stretching "          unit="1/(m s)"       grid_ref="grid_T_3D"/> 
 	     <field id="zstlimx"      long_name=" x component of QG limit stretching "    unit="1/(m s)"       grid_ref="grid_T_3D"/>
