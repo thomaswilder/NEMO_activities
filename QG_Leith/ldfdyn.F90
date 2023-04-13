@@ -717,9 +717,9 @@ CONTAINS
             !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
             ! initialization
             zrho3 = 0.03_wp
-            nmlnqg(:,:)  = nlb10               ! Initialization to the number of w ocean point
             DO jj = 1, jpj
                DO ji = 1, jpi
+                  nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
                   zztmp = gdepw_n(ji,jj,mbkt(ji,jj)+1)
                   zrho10_3(ji,jj) = zztmp
                END DO
@@ -740,7 +740,7 @@ CONTAINS
                      ENDIF
                   END DO
                END DO
-               END DO
+            END DO
             !
             !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
             !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
@@ -982,7 +982,7 @@ CONTAINS
          CALL iom_put( "zbudx"  , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
          CALL iom_put( "zbudy"  , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
          CALL iom_put( "tmpzstx", tmpzstx(:,:,:) )   ! temp QG Leith stretching term
-         CALL iom_put( "mld_qg" , zrho10_3(:,:) )    ! QG Leith mixed layer depth
+         CALL iom_put( "mld_qg" , nmlnqg(:,:) )      ! QG Leith mixed layer depth
          !
       END SELECT
       !

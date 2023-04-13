@@ -203,3 +203,16 @@ Model blows up around around depth of bump.
 - In the IF statements for below mixed layer, have changed the condition `jk < jpkm1` to `jk < ( mbkt(ji,jj) - 1 )`, since `mbkt` gives the index of bottom last T point in ocean, compared with `jpkm1`, which is the absolute bottom `k` index.
 - Successful run... 
 	- Improvement in some regions index range (467:475,21:25,5,1). 
+
+### 13th April
+Routine is outputting `zstlimx` even though its in the mixed layer. So, what values are `nmlnqg`?
+- Changing `mld_qg` output to `nmlnqg`.
+
+The `nmln` computation in `zdfmxl.F90` is not sufficient. It initializes `nmln` to the w-point below 10 m, but then only changes its value when the mixed layer criteria is met. But what if it is never met? Then the initial value is incorrect. It should be initialized with the number of vertical index points, `mbkt`. 
+- Lets try this...
+
+The mixed layer depth and condition is now correct, but still issues persist.
+
+I think the issue lies in the value of the Burger/Rossby numbers. A small Burger number implies the system is dominated by rotation, not stratification. The Rossby number does reach values of 1.
+
+Boundary layer mixing scheme?
