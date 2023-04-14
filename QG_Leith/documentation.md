@@ -221,4 +221,13 @@ Looking at the smooth transition in Bachman that uses the Froude number.
 - Examining the values in MATLAB suggests the Froude number could improve the scaled stretching term. 
 - Running simulation with Froude number ... much improved, with maximum viscous coefficient of around 1500 m^2/s. Still seems big. 
 
-Lets try and run the model for 1 day.
+Lets try and run the model for 1 day. 
+
+### 14th April
+But I set the diagnostics to 5 day outputs... so re-running the simulation for 10 days. The model did not output any errors previously.
+- Data has been written to file... promising. YES. VALUES LOOK GREAT!
+	- Max value at first 5 day mean is around 700 m^2/s, and next time step is 1000 m^2/s. Model not blowing up.
+
+Lets try and run for a year with monthly mean output.
+- Runs fine without errors.
+- Viscosity output is noisy.
