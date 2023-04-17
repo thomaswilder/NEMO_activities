@@ -77,6 +77,7 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwz          !: Vorticity on f-point (2D/QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstx, zsty   !: x and y components of stretching at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwzdx, zwzdy !: x and y components of horizontal gradients of vertical vorticity at T- points (QG Leith)
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivdx, hdivdy !: x and y components of horizontal gradients of divergence  at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbu          !: Buoyancy at T- point (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2    !: Burger number and square of Rossby and Froude number at T- points (QG Leith)
@@ -387,7 +388,8 @@ CONTAINS
                &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,           &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
-               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) , STAT=ierr )
+               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                &
+               &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
             !
             DO jj = 1, jpj             ! Set local gridscale values
@@ -412,6 +414,8 @@ CONTAINS
             zwz(:,:,:) = 0._wp
             zwzdx(:,:,:) = 0._wp
             zwzdy(:,:,:) = 0._wp
+            hdivdx(:,:,:) = 0._wp
+            hdivdy(:,:,:) = 0._wp
             rbu(:,:,:) = 0._wp
             rro2(:,:,:) = 0._wp
             rfr2(:,:,:) = 0._wp
@@ -935,8 +939,10 @@ CONTAINS
                   DO ji = 1, jpim1
                      zztmpx = r1_2 * ( r1_e1t(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) )               &
                         &  + r1_e1t(ji,jj) * ( hdivnqg(ji+1,jj,jk) - hdivnqg(ji,jj,jk) ) )
+                     hdivdx(ji,jj,jk) = zztmpx
                      zztmpy = r1_2 * ( r1_e2t(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) )               &
                         &  + r1_e2t(ji,jj) * ( hdivnqg(ji,jj+1,jk) - hdivnqg(ji,jj,jk) ) )
+                     hdivdy(ji,jj,jk) = zztmpy
                      ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * fmask(ji,jj,jk)
                   END DO
                END DO
@@ -990,6 +996,8 @@ CONTAINS
          CALL iom_put( "zstlimy", zstlimy(:,:,:) )   ! y component of QG stretching T- point
          CALL iom_put( "zwzdx"  , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
          CALL iom_put( "zwzdy"  , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
+         CALL iom_put( "hdivdx" , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
+         CALL iom_put( "hdivdy" , hdivdy(:,:,:) )    ! y component of divergence gradient T- point
          CALL iom_put( "zwz"    , zwz(:,:,:) )       ! QG vorticity at F- point
          CALL iom_put( "zbudx"  , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
          CALL iom_put( "zbudy"  , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point

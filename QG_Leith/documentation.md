@@ -231,3 +231,9 @@ But I set the diagnostics to 5 day outputs... so re-running the simulation for 1
 Lets try and run for a year with monthly mean output.
 - Runs fine without errors.
 - Viscosity output is noisy.
+
+### 17th April
+Checked the 2D Leith output at year 20, and this looks fine. Running this for further 80 years.
+
+Why is QG Leith noisy?
+- Outputting gradients of vorticity and divergence to see which terms contribute to the 'noise'.
