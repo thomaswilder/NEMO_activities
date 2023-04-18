@@ -664,6 +664,8 @@ CONTAINS
                END DO  
             END DO
             !
+            CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+            !
             !== calculate gradients of divergence, then square of magnitude (f-point) ==!
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
@@ -931,9 +933,10 @@ CONTAINS
                END DO  
             END DO
             !
+            CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
             !== calculate gradients of divergence, then square of magnitude (f-point) ==!
 !            CALL div_hor( kt )
-!            !
+            !
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1

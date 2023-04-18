@@ -57,7 +57,9 @@
 	     <field id="zstlimx"      long_name=" x component of QG limit stretching "    unit="1/(m s)"       grid_ref="grid_T_3D"/>
 	     <field id="zstlimy"      long_name=" y component of QG limit stretching "    unit="1/(m s)"       grid_ref="grid_T_3D"/>
 	     <field id="zwzdx"        long_name=" x component of vorticity gradient "     unit="1/(m s)"       grid_ref="grid_T_3D"/>
-	     <field id="zwzdy"        long_name=" y component of vorticity gradient "     unit="1/(m s)"       grid_ref="grid_T_3D"/>
+		  <field id="zwzdy"        long_name=" y component of vorticity gradient "     unit="1/(m s)"       grid_ref="grid_T_3D"/>
+	     <field id="hdivdx"       long_name=" x component of divergence gradient "    unit="1/(m s)"       grid_ref="grid_T_3D"/>
+	     <field id="hdivdy"       long_name=" y component of divergence gradient "    unit="1/(m s)"       grid_ref="grid_T_3D"/>
 	     <field id="zbudx"        long_name=" x component of buoyancy gradient "      unit="m/s^2"         grid_ref="grid_T_3D"/>
 	     <field id="zbudy"        long_name=" y component of buoyancy gradient "      unit="m/s^2"         grid_ref="grid_T_3D"/>
 		  <field id="zwz"          long_name=" QG vertical vorticity "                 unit="1/s"           grid_ref="grid_T_3D"/>

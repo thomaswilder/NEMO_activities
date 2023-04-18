@@ -237,3 +237,15 @@ Checked the 2D Leith output at year 20, and this looks fine. Running this for fu
 
 Why is QG Leith noisy?
 - Outputting gradients of vorticity and divergence to see which terms contribute to the 'noise'.
+
+### 18th April
+In 2D Leith spin up at year 50, viscous coefficient shows no sign of noise.
+
+Try spinning up with QG Leith. Maybe there is something strange going on with the change in viscous regime?
+- Running QG Leith for 20 years.
+
+Does horizontal divergence need `lbc_lnk_multi`? Lets try it.
+
+**recompile IDEAL and IDEAL2** 
+
+No change. Noise present in QG Leith.
