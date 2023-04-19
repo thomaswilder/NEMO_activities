@@ -249,3 +249,30 @@ Does horizontal divergence need `lbc_lnk_multi`? Lets try it.
 **recompile IDEAL and IDEAL2** 
 
 No change. Noise present in QG Leith.
+
+### 19th April
+Both Leith spin up runs have completed 20 years.
+- 2D Leith has no noise, even after 20 years.
+- QG Leith has **noise**.
+
+Going to output contributions of QG Leith e.g. after grid averaging on to T-point.
+- `ahmt_qg` and `ahmt_div`.
+Pickup the QG Leith run at year 20 and run for a further year.
+
+The noise is present in `ahmt_qg`, not the divergence part, which is opposite to what we thought.
+- Computing `ahmt_qg` offline using `zwzd..` does not give the noisy pattern. But also, `mld_qg` was not showing integer values.
+- Have changed the definition of `nmlnqg` from `REAL(wp)` to `INTEGER` in `ldfdyn.F90`.
+
+Running the year again but outputting `zstlimx` and `zstlimy` as well to see if they are populated and impacting `ahmt_qg`.
+
+Something odd is going on with `mld_qg`. Lets check `nmlnqg`...
+- `nmlnqg` was `REAL(wp)` because `iom_put` won't output `INTEGER`.
+Fixed this. Just assigned it prior to it being computed in routine.
+
+Some weird numbers going on. Computing `zstlimx` in matlab is not consistent with output from model.
+
+But, may be able to remove some `lbc_lnk` functions by using `jpi` instead of `jpim1 = jpi - 1`... Lets try this and see what comes of it.
+- For example, changed this in `zbu`, `zstx`, `zwzdx`, Burger number routine, stretching ...
+This compiled successfully!
+
+Check model run in am.

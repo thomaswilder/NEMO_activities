@@ -86,7 +86,8 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   mld_qg       !: QG Leith mixed layer depth
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   zrho10_3     !: mixed layer depth
-   REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   nmlnqg       !: number of levels in mixed layer
+   INTEGER,          ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   nmlnqg       !: number of levels in mixed layer
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ahmt_qg, ahmt_div   !: PV and Div contributions to QG Leith T-points [m2/s]
 
    REAL(wp) ::   r1_2    = 0.5_wp            ! =1/2
    REAL(wp) ::   r1_4    = 0.25_wp           ! =1/4
@@ -389,7 +390,8 @@ CONTAINS
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
                &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                &
-               &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , STAT=ierr )
+               &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , ahmt_qg(jpi,jpj,jpk) , ahmt_div(jpi,jpj,jpk) ,      &
+               &  STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
             !
             DO jj = 1, jpj             ! Set local gridscale values
@@ -421,7 +423,8 @@ CONTAINS
             rfr2(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             tmpzstx(:,:,:) = 0._wp
-            mld_qg(:,:) = 0._wp
+            ahmt_qg(:,:,:) = 0._wp
+            ahmt_div(:,:,:) = 0._wp
             !
          CASE DEFAULT
             CALL ctl_stop('ldf_dyn_init: wrong choice for nn_ahm_ijk_t, the type of space-time variation of ahm')
@@ -662,7 +665,7 @@ CONTAINS
                         &            * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
                   END DO  
                END DO  
-            END DO
+               END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
             !
@@ -713,14 +716,6 @@ CONTAINS
             zqglep1 = 1.e-12_wp
             zqglep2 = 1.e-24_wp
             !
-            DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
-                     IF( jk <= nmln(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
-                  END DO
-               END DO
-            END DO
-            !
             !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
             ! initialization
             zrho3 = 0.03_wp
@@ -749,13 +744,21 @@ CONTAINS
                END DO
             END DO
             !
+            DO jk = 1, jpkm1
+               DO jj = 1, jpjm1
+                  DO ji = 1, jpim1
+                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
+                  END DO
+               END DO
+            END DO
+            !
             !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
             !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
             !== begin calculation of stretching term d/dz[(f/(N**2))*b] ==!
             ! find buoyancy and interpolate onto w-grid !
             DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
+               DO jj = 1, jpj
+                  DO ji = 1, jpi
                      IF( jk < 2 ) THEN
                         !== buoyancy at surface ==!
                         zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
@@ -768,8 +771,8 @@ CONTAINS
                   END DO
                END DO
             END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', zbu, 'T', 1. )
+!            !
+!            CALL lbc_lnk_multi( 'ldfdyn', zbu, 'T', 1. )
             !
             !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
             DO jk = 1, jpkm1
@@ -806,25 +809,25 @@ CONTAINS
             !
             !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
             DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
+               DO jj = 1, jpj
+                  DO ji = 1, jpi
                      !== are we below the mixed layer and above the sea floor? ==!
                      IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
                         !== vertical gradient of x component ==!
                         zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                         zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-                        zstx(ji,jj,jk) = ( ( zker1 - zker2 )  / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                        zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
                         !== vertical gradient of y component ==!
                         zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
                         zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-                        zsty(ji,jj,jk) = ( ( zker1 - zker2 )  / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                        zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
                      ENDIF
                   END DO
                END DO
             END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', zstx, 'T', 1. )
-            CALL lbc_lnk_multi( 'ldfdyn', zsty, 'T', 1. )
+!            !
+!            CALL lbc_lnk_multi( 'ldfdyn', zstx, 'T', 1. )
+!            CALL lbc_lnk_multi( 'ldfdyn', zsty, 'T', 1. )
             !
             !== calculate vertical vorticity (f+zeta) on f-point ==!
             !== calculate meridional gradient of coriolis parameter f and add to zwzdy ==!
@@ -846,8 +849,8 @@ CONTAINS
             !
             !== calculate horizontal gradient of vertical vorticity on t-point ==!
             DO jk = 1, jpkm1
-               DO jj = 2, jpjm1
-                  DO ji = 2, jpim1
+               DO jj = 2, jpj
+                  DO ji = 2, jpi
                      zwzdx(ji,jj,jk) = r1_2 * ( r1_e1f(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) )            &
                         &                 + r1_e1f(ji,jj) * ( zwz(ji,jj,jk) - zwz(ji-1,jj,jk) ) )
                      zwzdy(ji,jj,jk) = r1_2 * ( r1_e2f(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) )            &
@@ -862,14 +865,14 @@ CONTAINS
             !== calculate the Burger number and square of Rossby number on t-point ==!
             !== calculate over entire domain for diagnostics ==!
             DO jk = 1, jpkm1
-               DO jj = 2, jpjm1
-                  DO ji = 2, jpim1
+               DO jj = 2, jpj
+                  DO ji = 2, jpi
                      !== grid scale velocity squared ==!
                      zztmpx = 0.5 * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
                      zztmpy = 0.5 * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
                      zusq =  zztmpx**2 + zztmpy**2
                      !== square of Rossby number U^2/(f^2 * A) ==!
-                     rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * fmask(ji,jj,jk)
+                     rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
                      !== averaging square of buoyancy frequency onto t-grid ==!
                      IF( jk < mbkt(ji,jj) ) THEN
                         !== accounting for negative N^2 ==!
@@ -879,7 +882,7 @@ CONTAINS
                         znsq = pn2(ji,jj,jk)
                      ENDIF
                      !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-                     rbu(ji,jj,jk) = ( MAX( znsq, zqglep1 )  * e3t_n(ji,jj,jk)**2 ) /    &
+                     rbu(ji,jj,jk) = ( MAX( znsq, zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
                         &  ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
                      !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
                      rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
@@ -892,8 +895,8 @@ CONTAINS
             !
             !== are we in the QG limit? Find the stretching value in x and y components ==!
             DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1
+               DO jj = 1, jpj
+                  DO ji = 1, jpi
                      !== are we below the mixed layer and above the sea floor? ==!
                      IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
                		   !== x component of stretching ==!
@@ -951,18 +954,20 @@ CONTAINS
                END DO
             END DO
             !
+            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
+            !
             !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
             DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1
+               DO jj = 1, jpj
+                  DO ji = 1, jpi
                      zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
                      zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
                      dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * tmask(ji,jj,jk)
                   END DO
                END DO
             END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1. )
+!            !
+!            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1. )
             !
             !== calculate visacosity coefficient ==!
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
@@ -970,10 +975,15 @@ CONTAINS
                   DO ji = fs_2, fs_jpim1 ! vector opt.
                      zsqqg = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) ) + dwzmagsq(ji,jj,jk)
+                     ahmt_qg(ji,jj,jk) = dwzmagsq(ji,jj,jk)
+                     ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                        &  ddivmagsq(ji-1,jj-1,jk) )
                      ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
                   END DO
                END DO
             END DO
+            !
+            CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
             !
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
@@ -994,18 +1004,20 @@ CONTAINS
          CALL iom_put( "rbu"    , rbu(:,:,:) )       ! Burger number T- point
          CALL iom_put( "rfr2"   , rfr2(:,:,:) )      ! square of Froude number T- point
          CALL iom_put( "zstx"   , zstx(:,:,:) )      ! x component of QG stretching T- point
-         CALL iom_put( "zsty"   , zsty(:,:,:) )      ! y component of QG stretching T- point
-         CALL iom_put( "zstlimx", zstlimx(:,:,:) )   ! x component of QG stretching T- point
-         CALL iom_put( "zstlimy", zstlimy(:,:,:) )   ! y component of QG stretching T- point
-         CALL iom_put( "zwzdx"  , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
-         CALL iom_put( "zwzdy"  , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
-         CALL iom_put( "hdivdx" , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
-         CALL iom_put( "hdivdy" , hdivdy(:,:,:) )    ! y component of divergence gradient T- point
-         CALL iom_put( "zwz"    , zwz(:,:,:) )       ! QG vorticity at F- point
-         CALL iom_put( "zbudx"  , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
-         CALL iom_put( "zbudy"  , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
-         CALL iom_put( "tmpzstx", tmpzstx(:,:,:) )   ! temp QG Leith stretching term
-         CALL iom_put( "mld_qg" , nmlnqg(:,:) )      ! QG Leith mixed layer depth
+         CALL iom_put( "zsty"    , zsty(:,:,:) )      ! y component of QG stretching T- point
+         CALL iom_put( "zstlimx" , zstlimx(:,:,:) )   ! x component of QG stretching T- point
+         CALL iom_put( "zstlimy" , zstlimy(:,:,:) )   ! y component of QG stretching T- point
+         CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
+         CALL iom_put( "zwzdy"   , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
+         CALL iom_put( "hdivdx"  , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
+         CALL iom_put( "hdivdy"  , hdivdy(:,:,:) )    ! y component of divergence gradient T- point
+         CALL iom_put( "zwz"     , zwz(:,:,:) )       ! QG vorticity at F- point
+         CALL iom_put( "zbudx"   , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
+         CALL iom_put( "zbudy"   , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
+         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
+         CALL iom_put( "mld_qg"  , mld_qg(:,:) )      ! QG Leith mixed layer depth
+         CALL iom_put( "ahmt_qg" , ahmt_qg(:,:,:) )   ! PV contribution to QG Leith T-point
+         CALL iom_put( "ahmt_div", ahmt_div(:,:,:) )  ! Div contribution to QG Leith T-point
          !
       END SELECT
       !

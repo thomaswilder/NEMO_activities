@@ -64,7 +64,9 @@
 	     <field id="zbudy"        long_name=" y component of buoyancy gradient "      unit="m/s^2"         grid_ref="grid_T_3D"/>
 		  <field id="zwz"          long_name=" QG vertical vorticity "                 unit="1/s"           grid_ref="grid_T_3D"/>
 		  <field id="tmpzstx"      long_name=" temp QG stretching term "                                    grid_ref="grid_T_3D"/>
-        <field id="mld_qg"       long_name=" QG Leith mixed layer depth "            unit="m"                                 />
+		  <field id="mld_qg"       long_name=" QG Leith mixed layer depth "            unit="m"                                 />
+		  <field id="ahmt_qg"      long_name=" PV component of QG Leith "                                   grid_ref="grid_T_3D"/>
+		  <field id="ahmt_div"     long_name=" DIV component of QG Leith "                                  grid_ref="grid_T_3D"/>
 
         <field id="sst"          long_name="sea surface temperature"                            standard_name="sea_surface_temperature"             unit="degC"     />
         <field id="sst2"         long_name="square of sea surface temperature"                  standard_name="square_of_sea_surface_temperature"   unit="degC2"     > sst * sst </field >
