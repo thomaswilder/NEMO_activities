@@ -254,3 +254,11 @@ Checking Leith schemes with 600 year pick up.
   ```
 - Have emailed Monsoon support...
 
+
+### 20/4/23
+Model working now...
+
+- There is some noise in the QG Leith run. We will try a 4th order tracer advection scheme by setting `nn_cen_h = 4` in `namtra_adv` in `namelist_cfg`.
+- Have also reduced number of processes needed by model from 360 to 180 to lower computational cost.
+
+Could do with an exit with error code line in bash script `combine_tidy.sh`. Running this function without correct XIOS input deletes diagnostic outputs regardless if rebuild was successful or not. 

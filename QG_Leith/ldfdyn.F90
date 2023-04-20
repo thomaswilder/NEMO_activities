@@ -425,6 +425,7 @@ CONTAINS
             tmpzstx(:,:,:) = 0._wp
             ahmt_qg(:,:,:) = 0._wp
             ahmt_div(:,:,:) = 0._wp
+            mld_qg(:,:) = 0._wp
             !
          CASE DEFAULT
             CALL ctl_stop('ldf_dyn_init: wrong choice for nn_ahm_ijk_t, the type of space-time variation of ahm')

@@ -276,3 +276,11 @@ But, may be able to remove some `lbc_lnk` functions by using `jpi` instead of `j
 This compiled successfully!
 
 Check model run in am.
+
+### 20th April
+Wonder if the monthly means are impacting the matlab computations? Lets restart and run for 2 timesetps.
+- Yep, the monthly averaging is the reason. Single timesteps work.
+
+Could try negative 1 in the `lbc_lnk` function for buoyancy gradients on U and V points. Maybe I am telling it to communicate in the wrong direction?
+
+Going to try running the model with 4th order advection scheme for tracers.
