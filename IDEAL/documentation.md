@@ -19,10 +19,10 @@ Documenting the development of the idealised nemo configuration. The aim is to d
 - Domain size is (L_x, L_y) = (1000, 2000) km with grid spacing of 10 km, so (nx, ny) = (100, 200+2).
 - In the vertical, L_z = 3000 m with nz = 14+1 z-levels. Vertical grid calculated in-house.
 - Ocean bottom is flat (for now).
-- Temperature, salinity, and wind stress are calculated using gen_nemo_ideal_fields.py, a modified J.Mak's *_unagi_*.py file.
+- Temperature, salinity, and wind stress are calculated using gen_nemo_ideal_fields.py, a modified J.Mak's _unagi_.py file.
 
 ### Modifying namelist_cfg file
-- Biharmonic viscosity, `rn_Uv = 1` m/s, `rn_Lv = 10.e+3` gives Am = 8*e+10 m^4/s.
+- Biharmonic viscosity, `rn_Uv = 1` m/s, `rn_Lv = 10.e+3` gives `Am = 8*e+10 m^4/s`.
 - Vertical diffusion `rn_avt0=0.` so temp does not diffuse anywhere.
 - Time-step, `rn_dqt = 800` s, and `nn_itend=108` to run for one whole day initially.
 - Using absolute wind stress to start, so `rn_vfac = 0` under `namsbc_blk`. This is set in the reference and only needs changing for relative wind stress.
@@ -41,7 +41,7 @@ Documenting the development of the idealised nemo configuration. The aim is to d
 ### (21/11/2022)
 - Output frequency is managed in the file `file_def_nemo.xml`
 - Set `enable=".FALSE." for all output except 1d... nope.
-- Moved `<file id="file1"...` below `<file_group id="1d!...` hmm
+- Moved "<file id="file1"...` below `<file_group id="1d!..." hmm
 - Added additional file (diagnostics) to 1 day output section.
 - A few syntax errors, now ironed out, and model outputting 1 day mean data. See file `file_def_nemo.xml` in `EXPH10` folder. (insert link here).
 
@@ -262,3 +262,8 @@ Model working now...
 - Have also reduced number of processes needed by model from 360 to 180 to lower computational cost.
 
 Could do with an exit with error code line in bash script `combine_tidy.sh`. Running this function without correct XIOS input deletes diagnostic outputs regardless if rebuild was successful or not. 
+
+### 21/4/23
+- 4th order tracer advection scheme doesn't reduce the noise.
+- It does look like the noise is present at the base of the mixed layer.
+- Try a smaller timestep e.g. 200 s. Also didn't solve the problem of noise.
