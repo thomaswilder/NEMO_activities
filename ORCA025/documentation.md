@@ -7,6 +7,7 @@ The idea behind this documentation is for me to document everything I do, from m
 - https://code.metoffice.gov.uk/trac/moci/wiki/tips_CRgeneral
 - Use `u-cn052(M)` on Monsoon2.
 - Check [here](https://code.metoffice.gov.uk/trac/home/wiki/ProjectList) for svn url's.
+- [Getting started](https://code.metoffice.gov.uk/trac/home/wiki/FAQ).
 
 
 ### 21st April
@@ -22,3 +23,35 @@ What svn url do i create a branch from to work on `u-cn052`? Is it here https://
 Errors in postprocessing of `u-cr756`.
 - Seems to still be trying to use `jmmp` project when executing moose command.
 - Shutting down suite for the day.
+
+
+### 24th April
+- Running u-cr756 again to reproduce error above.
+
+Trying to locate GOSI9p8.0:
+	- Located [here](https://code.metoffice.gov.uk/trac/nemo/log/NEMO/branches/UKMO/NEMO_4.0.4_GOSI9_package?rev=16215) on trac.
+	- Located [here](https://code.metoffice.gov.uk/svn/nemo/NEMO/branches/UKMO/NEMO_4.0.4_GOSI9_package/) on svn.
+
+Going to play around checking out and making changes with the test repository provided [here](https://code.metoffice.gov.uk/trac/test).
+	- Test ticket number 32.
+	- `Committed revision 232.
+[info] Created: https://code.metoffice.gov.uk/svn/test/test/branches/dev/thomaswilder/r231_wildert`
+
+- Can find the source code location using `rosie go` and going to `fcm_make_ocean -> env -> NEMO and SI3 sources`.
+- Need to make my own branch of the GO8 package.
+
+Created a ticket on https://code.metoffice.gov.uk/trac/GO/ entitled 'Implementing Quasi-Geostrophic Leith Viscosity'. 
+	- Ticket number 652.
+	- Location: https://code.metoffice.gov.uk/trac/gmed/ticket/652#ticket
+
+Checked out a branch of GO8 located here https://code.metoffice.gov.uk/svn/nemo/NEMO/branches/dev/thomaswilder/r15557_NEMO_4.0.4_GO8_package_qgleith
+
+To do:
+1) Incorporate QG Leith code change into working copy of branch.
+2) Commit changes in working copy to metoffice branch.
+3) Test QG Leith.
+
+First, why is postproc task not completing.
+- In rosie go, `postproc -> Post Processing - common settings -> Moose Archiving`, change `moo-project` to `project-ukesm`.
+- Try running for 2 months.
+- Changed `base_component` to `5 days` under `postproc -> NEMO -> Diagnostics -> Meaning`.
