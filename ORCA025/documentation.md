@@ -55,3 +55,25 @@ First, why is postproc task not completing.
 - In rosie go, `postproc -> Post Processing - common settings -> Moose Archiving`, change `moo-project` to `project-ukesm`.
 - Try running for 2 months.
 - Changed `base_component` to `5 days` under `postproc -> NEMO -> Diagnostics -> Meaning`.
+
+### 25th April
+Saved `moo-project` to `project-ukesm` in `postproc`.
+
+Realised I created a nemo branch from the trunk. Deleted branch, and creating a new one using the `--branch-of-branch` option in `fcm create-branch`.
+
+Created again using the NEMO trunk!!! Why? Maybe its a sub tree so cannot create a branch from that?
+Tried also creating a branch from trunk at an earlier revision.
+- Queried this with Till by email.
+
+ORCA025 ran successfully for one month and wrote data to file.
+	- Data restart and grid files located in `cycl_run/u-cr756/share/data/History_Data/NEMOhist`
+	- Checking if data written to mass with `moo ls moose:/crum/u-cr756`. Files are `ida.file`, `oda.file`, and `onm.nc.file`...?
+	- `onm.nc.file` contains all nemo grid files.
+
+Installed moose on JASMIN.
+	- Log in like `ssh -X twilder@mass-cli.jasmin.ac.uk`
+	- Can also view files of `u-cr756` from mass VM on JASMIN in the same way as is done on Monsoon2.
+
+How do I add diagnostics to the ORCA025 suite?
+	- Can fine the `file_def_nemo-oce.xml` in `/roses/u-cr756/app/nemo/file/` directory.	
+
