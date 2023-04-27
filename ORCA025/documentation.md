@@ -77,3 +77,7 @@ Installed moose on JASMIN.
 How do I add diagnostics to the ORCA025 suite?
 	- Can fine the `file_def_nemo-oce.xml` in `/roses/u-cr756/app/nemo/file/` directory.	
 
+### 27th April
+Can we restart the rose suite by changing the pickup/start date?
+	- Lets also turn off compiling drivers and ocean.
+Seems to be running.

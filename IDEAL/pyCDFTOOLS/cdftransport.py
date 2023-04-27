@@ -2,6 +2,7 @@
 #
 # Function adapted from CDFTOOLS/cdftransport.f90 to compute the zonal transport.
 # In addition, cdftransport.py also computes the vertical heat transport.
+# n.b. this function may need the addition of bathymetric level `mbkt`.
 #
 #  !!======================================================================
 #  !!                     ***  PROGRAM  cdftransport  ***
