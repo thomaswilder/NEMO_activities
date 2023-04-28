@@ -22,3 +22,6 @@ Need to make updated `cdftransport.py` work.
 - Updated elif statement on line 80.
 - Updated function description.
 
+
+### 28th April
+- Fixed an issue that gave errors when using only the default u-file and u-var.

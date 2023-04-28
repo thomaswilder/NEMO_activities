@@ -54,6 +54,9 @@ import logging
 # import numba
 from numpy import zeros
 
+import os
+os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
+
 logging.basicConfig(filename='output.log', level=logging.ERROR)
 
 def cdftransport(data_dir, file, var, **kwargs):
@@ -142,13 +145,13 @@ def cdftransport(data_dir, file, var, **kwargs):
     cf_wfil.close()
   cf_ufil.close()
 
-  val = dlt[0,100,300]
-  logging.debug(f"a temperature value is {val}")
-  val = dlw[0,100,300]
-  logging.debug(f"a vertical velocity value is {val}")
+#  val = dlt[0,100,300]
+#  logging.debug(f"a temperature value is {val}")
+#  val = dlw[0,100,300]
+#  logging.debug(f"a vertical velocity value is {val}")
 
-
-  cn_mask = Dataset(data_dir + "mesh_mask.nc")
+  mask = 'mesh_mask.nc'
+  cn_mask = Dataset(data_dir + mask)
   if opt_dic["lprint"]:
     print(cn_mask)
   e2u     = cn_mask.variables["e2u"][0, :, :]
@@ -169,19 +172,19 @@ def cdftransport(data_dir, file, var, **kwargs):
     dwkwt = zeros((npk, npjglo, npiglo))
     dtrpwt = zeros((npk))
 
-  # compute temperature flux at every grid point
-  for jk in range(npk):
-    for jj in range(npjglo):
-      for ji in range(npiglo):
-        if jk == 0:
-          dlwt[jk, jj, ji] = 0.0
-        elif jk < npk-1:
-          dlwt[jk, jj, ji] = dlw[jk, jj, ji] * 0.5*( dlt[jk, jj, ji] + dlt[jk+1, jj, ji] ) * rau0 * rcp
-        else:
-          dlwt[jk, jj, ji] = 0.0
+    # compute temperature flux at every grid point
+    for jk in range(npk):
+      for jj in range(npjglo):
+        for ji in range(npiglo):
+          if jk == 0:
+            dlwt[jk, jj, ji] = 0.0
+          elif jk < npk-1:
+            dlwt[jk, jj, ji] = dlw[jk, jj, ji] * 0.5*( dlt[jk, jj, ji] + dlt[jk+1, jj, ji] ) * rau0 * rcp
+          else:
+            dlwt[jk, jj, ji] = 0.0
 
-  val = dlwt[5,100,300]
-  logging.debug(f"a temperature flux value is {val}")
+    val = dlwt[5,100,300]
+    logging.debug(f"a temperature flux value is {val}")
         
   # find volume transport at each cell boundary (e.g. dwku = dlu*e2u*e3u)
   # and integrate vertically (dtrpu = dtrpu + dwku)

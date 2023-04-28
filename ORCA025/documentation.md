@@ -81,3 +81,17 @@ How do I add diagnostics to the ORCA025 suite?
 Can we restart the rose suite by changing the pickup/start date?
 	- Lets also turn off compiling drivers and ocean.
 Seems to be running.
+
+
+### 28th April
+Picked up from month 1 and ran for a further month successfully.
+
+Try and modify the diagnostics.
+	- Potentially do this by selecting custom diagnostics and including the `file_def_nemo-oce.xml` in `/file' directory of rose suite.
+	- In `file_def_nemo-oce.xml`, why is the first `file id="file8"`?
+	- So, 	file_def` files are in `roses` directory, but `field_def` is not, so how do you add diagnostics to the rose suite? Add your own file and point the suite to that file? Put in same `file` directory as the `file_def`.
+
+To Do:
+1) Modify `file_def_nemo-{oce,ice}.xml` files.
+2) Will the rose suite run?
+
