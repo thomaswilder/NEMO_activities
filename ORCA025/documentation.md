@@ -95,3 +95,8 @@ To Do:
 1) Modify `file_def_nemo-{oce,ice}.xml` files.
 2) Will the rose suite run?
 
+
+### 2nd May
+To Do:
+1) See email about duplex data in mass.
+

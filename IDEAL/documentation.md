@@ -267,3 +267,11 @@ Could do with an exit with error code line in bash script `combine_tidy.sh`. Run
 - 4th order tracer advection scheme doesn't reduce the noise.
 - It does look like the noise is present at the base of the mixed layer.
 - Try a smaller timestep e.g. 200 s. Also didn't solve the problem of noise.
+
+### 5/5/23
+Incorrect biharmonic viscosity chosen. In GO8, they use `nn_ahm_ijk_t = 20`, not 30. This has been modified and a new biharmonic experiment is being run.
+
+### 12/5/23
+When running the QG Leith simulations, noisy patterns appear in the southern part of the domain. This is possibly a result of low stratification and QG Leith dependence on square of buoyancy frequency. In response to this, have introduced a background salinity profile that linearly varies with depth, with values of 34.6 at the surface, and 35.2 at depth.
+- Running IDEAL for one year with QG Leith viscosity.
+- Doesn't seem to solve the issue. Still large values of visc coeff below mixed layer.
