@@ -80,7 +80,12 @@ def cdftransport(data_dir, file, var, **kwargs):
     lvert    = Supplying vertical velocity for vertical heat transport
 
   Returns:
-    total zonal transport, vertical heat transport, depth on T-point => (dvoltrpsum, vht, deptht) 
+    total zonal transport, vertical heat transport, depth on T-point => (dvoltrpsum, vht, deptht)
+
+
+  History:
+    -        First write up in Python.
+    May      Added condition to check if input data is masked array, if so, get data to do numpy computations on.
   """
 
   w_file = t_file = w_var = t_var = None
@@ -129,6 +134,9 @@ def cdftransport(data_dir, file, var, **kwargs):
   npjglo  = len(cf_ufil.dimensions["y"])
   npk     = len(cf_ufil.dimensions["depthu"])
   dlu     = cf_ufil.variables[u_var][opt_dic["kt"], :, :, :]
+  # is the array a masked array, if so, get data.
+  if isinstance(dlu, np.ma.MaskedArray):
+    dlu = np.ma.getdata(dlu)
   if opt_dic["lheat"]:
 #    t_file = kwargs.get('t_file')
 #    t_var = kwargs.get('t_var')
@@ -137,12 +145,16 @@ def cdftransport(data_dir, file, var, **kwargs):
     dlt     = cf_tfil.variables[t_var][opt_dic["kt"], :, :, :]
     deptht  = cf_tfil.variables["deptht"][:]
     cf_tfil.close()
+    if isinstance(dlt, np.ma.MaskedArray):
+      dlt = np.ma.getdata(dlt)
   if opt_dic["lvert"]:
 #    w_file = kwargs.get('w_file')
 #    w_var = kwargs.get('w_var')
     cf_wfil = Dataset(data_dir + w_file)
     dlw     = cf_wfil.variables[w_var][opt_dic["kt"], :, :, :]
     cf_wfil.close()
+    if isinstance(dlw, np.ma.MaskedArray):
+      dlw = np.ma.getdata(dlw)
   cf_ufil.close()
 
 #  val = dlt[0,100,300]
@@ -162,6 +174,9 @@ def cdftransport(data_dir, file, var, **kwargs):
     e2t     = cn_mask.variables["e2t"][0, :, :]
     e3t_0   = cn_mask.variables["e3t_0"][0, :, :, :]
   cn_mask.close()
+
+
+  
 
   # Begin calculations
   # Allocate variables

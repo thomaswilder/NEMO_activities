@@ -25,3 +25,7 @@ Need to make updated `cdftransport.py` work.
 
 ### 28th April
 - Fixed an issue that gave errors when using only the default u-file and u-var.
+
+
+### 15th May
+- Are the input arrays masked? If so, get data from masked array to perform numpy calculations on.
