@@ -52,7 +52,7 @@
 from netCDF4 import Dataset
 import logging
 # import numba
-from numpy import zeros
+import numpy as np
 
 import os
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
@@ -163,7 +163,7 @@ def cdftransport(data_dir, file, var, **kwargs):
 #  logging.debug(f"a vertical velocity value is {val}")
 
   mask = 'mesh_mask.nc'
-  cn_mask = Dataset(data_dir + mask)
+  cn_mask = Dataset(mask)
   if opt_dic["lprint"]:
     print(cn_mask)
   e2u     = cn_mask.variables["e2u"][0, :, :]
@@ -180,12 +180,12 @@ def cdftransport(data_dir, file, var, **kwargs):
 
   # Begin calculations
   # Allocate variables
-  dwku = zeros((npk, npjglo, npiglo))
-  dtrpu = zeros((npjglo, npiglo))
+  dwku = np.zeros((npk, npjglo, npiglo))
+  dtrpu = np.zeros((npjglo, npiglo))
   if opt_dic["lheat"]:
-    dlwt = zeros((npk, npjglo, npiglo))
-    dwkwt = zeros((npk, npjglo, npiglo))
-    dtrpwt = zeros((npk))
+    dlwt = np.zeros((npk, npjglo, npiglo))
+    dwkwt = np.zeros((npk, npjglo, npiglo))
+    dtrpwt = np.zeros((npk))
 
     # compute temperature flux at every grid point
     for jk in range(npk):
