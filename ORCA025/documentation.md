@@ -87,9 +87,9 @@ Seems to be running.
 Picked up from month 1 and ran for a further month successfully.
 
 Try and modify the diagnostics.
-	- Potentially do this by selecting custom diagnostics and including the `file_def_nemo-oce.xml` in `/file' directory of rose suite.
+	- Potentially do this by selecting custom diagnostics and including the `file_def_nemo-oce.xml` in `/file` directory of rose suite.
 	- In `file_def_nemo-oce.xml`, why is the first `file id="file8"`?
-	- So, 	file_def` files are in `roses` directory, but `field_def` is not, so how do you add diagnostics to the rose suite? Add your own file and point the suite to that file? Put in same `file` directory as the `file_def`.
+	- So, `file_def` files are in `roses` directory, but `field_def` is not, so how do you add diagnostics to the rose suite? Add your own file and point the suite to that file? Put in same `file` directory as the `file_def`.
 
 To Do:
 1) Modify `file_def_nemo-{oce,ice}.xml` files.
@@ -99,4 +99,19 @@ To Do:
 ### 2nd May
 To Do:
 1) See email about duplex data in mass.
+
+
+### 18th May
+To Do:
+1. Checkout NEMO branch,
+2. Add modified `ldfdyn.F90` and `step.F90` into NEMO source code,
+3. Update `field_def_nemo-oce.xml` and `file_def`,
+
+Found a possible workaround for creating a nemo branch [here](https://code.metoffice.gov.uk/trac/GO/wiki/GODocumentation/GO8.0/NemoUpgradeInstructions#no1)
+
+Possibly successful:
+- Made a copy of the branch `NEMO_4.0.4_GO8_package` into `dev/thomaswilder/...`. This is found [here](https://code.metoffice.gov.uk/trac/nemo/browser/NEMO/branches/dev/thomaswilder/NEMO_4.0.4_GO8_package_QGLeith?rev=16231).
+- Need to check if the Rose suite will run with a link to the dev branch first before making any changes.
+- `fcm bc` doesn't do what I want it to do.
+- Have updated CMS post with solution.
 
