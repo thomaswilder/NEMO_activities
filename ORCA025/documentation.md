@@ -31,7 +31,7 @@ Errors in postprocessing of `u-cr756`.
 Trying to locate GOSI9p8.0:
 	- Located [here](https://code.metoffice.gov.uk/trac/nemo/log/NEMO/branches/UKMO/NEMO_4.0.4_GOSI9_package?rev=16215) on trac.
 	- Located [here](https://code.metoffice.gov.uk/svn/nemo/NEMO/branches/UKMO/NEMO_4.0.4_GOSI9_package/) on svn.
-
+cr756o_1m_19760201_19760228_grid_T_197602-197602.nc
 Going to play around checking out and making changes with the test repository provided [here](https://code.metoffice.gov.uk/trac/test).
 	- Test ticket number 32.
 	- `Committed revision 232.
@@ -114,4 +114,23 @@ Possibly successful:
 - Need to check if the Rose suite will run with a link to the dev branch first before making any changes.
 - `fcm bc` doesn't do what I want it to do.
 - Have updated CMS post with solution.
+
+
+### 24th May
+Working on:
+	- Modifying source code,
+	- Modifying field and file def files.
+
+The `file_def` and `field_def` files are extracted from the `METO_GO` cfgs on `code.metoffice` `GO8` branch.
+	- Add own custom files to the `ocean_ice` folder in the roses suite.
+	- Try putting BASIC diagnostic files in `app/file` and seeing if this works. Changing the file numbers. 
+	- What does `sync_freq` mean in the xml fles?
+
+Model has run and data has outputted, and looks good. Have turned off postproc and housekeeping for now.
+	- Run postproc and housekeeping.
+	- Added `eken` diagnostic to check if this works. Picking up from restart file and running only model for one month. This works.
+
+To Do:
+1) Add in modified src files and commit these changes to the branch on MO,
+2) Modify field def file to include QG diagnostics.
 
