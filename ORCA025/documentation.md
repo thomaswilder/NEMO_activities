@@ -131,6 +131,67 @@ Model has run and data has outputted, and looks good. Have turned off postproc a
 	- Added `eken` diagnostic to check if this works. Picking up from restart file and running only model for one month. This works.
 
 To Do:
-1) Add in modified src files and commit these changes to the branch on MO,
-2) Modify field def file to include QG diagnostics.
+1. Modify `ldfdyn` for mixed layer depth, use the variable `nmln` from original source. Test this first in the idealised config.
+2. Add in modified src files and commit these changes to the branch on MO,
+3. Modify field def file to include QG diagnostics.
+
+
+### 1st June
+From ESMGA, consider adding in ice cavities to the GOSI9 config, and diagnose the impact of eddy parameterisations on them.
+
+
+### 5th June
+- Updated [ticket](https://code.metoffice.gov.uk/trac/gmed/ticket/652) with branch information.
+- Adding in modified src files to the branch on MO ... done. Revision now updated to 16236. Need to account for this in rose suite.
+- Lets see if QG Leith is an option in the rose suite ...? No. Try adding the options manually to `app/nemo/rose-app.conf`. Error in rose suite saying `value 34 not in allowed values`. So how how is it added to the choices... reference? But it might just work. Lets try it...
+- Adding `ahmt_3d` diagnostic to `file_def_nemo-oce.xml`. Uncertain where `field_def` goes, maybe in same directory as `field_def`?
+
+Does it compile? YES.
+
+Now run ocean and postproc components. Fail on `ocean_ice`,
+- `> Error [CObjectFactory::GetObject(const StdString & id)] : In file '/var/spool/jtmp/6413365.xcs00.XplTEw/xios/src/object_factory_impl.hpp', line 78 -> [ id = rro2, U = field ] object was not found.`
+
+Lets try 2D Leith. Looks to be running fine... What do the output fields look like? Check JASMIN. Looks great.
+
+Error in QG Leith could be due to diagnostics, `rro2` is the first `iom_put...`. Need to modify `field_def` accordingly.
+- Uploading modified `field_def...` from `NEMO_activities/ORCA025` to `ocean_ice` app. 
+
+MOOSE data:
+- `ida.file` are restart files.
+- `onm.nc.file` are ocean diagnostic files.
+
+Testing out QG Leith with `field_def...` added to `ocean_ice` app ... This did not work.
+- Maybe change source for file in rose suite. This works, but for some reason the `field_def` file from `cfgs/SHARED` on MO repo is not the same one extracted in `cylc-run`.
+- Copied one from cylc directory, modified it, and copied in to `ocean_ice` app.
+- Seems to run for a while but eventually fail with error,
+```
+Application 196964917 is crashing. ATP analysis proceeding...
+Rank 320 [Mon Jun  5 15:40:06 2023] [c7-2c0s8n3] application called MPI_Abort(MPI_COMM_WORLD, 60) - process 320
+
+ATP Stack walkback for Rank 320 starting:
+  _start@start.S:113
+  __libc_start_main@libc-start.c:242
+  main@nemo.f90:18
+  main@nemo.f90:18
+  nemo_gcm$nemogcm_@nemogcm.F90:167
+  stp$step_@step.F90:261
+  stp_ctl$stpctl_@stpctl.F90:45
+  ctl_stop$lib_mpp_@lib_mpp.F90:1722
+  mppstop$lib_mpp_@lib_mpp.F90:1299
+  mpi_abort__@0x56024bc
+  MPI_Abort@0x55f97ed
+  MPID_Abort@0x5635661
+  abort@abort.c:92
+  raise@pt-raise.c:42
+ATP Stack walkback for Rank 320 done
+Process died with signal 6: 'Aborted'
+Forcing core dumps of ranks 320, 108, 144, 185, 115, 156, 180, 157, 184, 290, 301, 0, 344, 348, 346, 349, 216, 252, 333, 222
+View application merged backtrace tree with: stat-view atpMergedBT.dot
+You may need to: module load stat
+
+_pmiu_daemon(SIGCHLD): [NID 06768] [c7-2c0s12n0] [Mon Jun  5 15:41:51 2023] PE RANK 342 exit signal Killed
+[NID 06768] 2023-06-05 15:41:51 Apid 196964917: initiated application termination
+[FAIL] run_model # return-code=137
+2023-06-05T15:42:12Z CRITICAL - failed/EXIT
+```
 
