@@ -158,7 +158,8 @@ Error in QG Leith could be due to diagnostics, `rro2` is the first `iom_put...`.
 
 MOOSE data:
 - `ida.file` are restart files.
-- `onm.nc.file` are ocean diagnostic files.
+- `onm.nc.file` are ocean diagnostic files. Monthly.
+- `ond.nc.file` are daily diagnostic files.
 
 Testing out QG Leith with `field_def...` added to `ocean_ice` app ... This did not work.
 - Maybe change source for file in rose suite. This works, but for some reason the `field_def` file from `cfgs/SHARED` on MO repo is not the same one extracted in `cylc-run`.
@@ -194,4 +195,24 @@ _pmiu_daemon(SIGCHLD): [NID 06768] [c7-2c0s12n0] [Mon Jun  5 15:41:51 2023] PE R
 [FAIL] run_model # return-code=137
 2023-06-05T15:42:12Z CRITICAL - failed/EXIT
 ```
+Above error (code 137) could be caused excessive memory usage.
 
+### 6th June
+Maybe try and run the QG Leith routine for one day.
+- See plots on Jupyter.
+
+QG Leith has patches of saturated viscosity next to near zero viscosity, like a discontinuity is present.
+- Near surface this is very obvious.
+- At depth, there are veins of small viscosity surrounding larger viscosity patches.
+A better approach to defining the mixed layer is needed?
+
+Try and run for 5 days and output some diagnostics e.g. mixed layer depth, stretching.
+
+Modified mixed layer depth criteria in `ldfdyn.F90` in ORCA025 directory, changed to `rho_c=0.01` on line 722.
+
+There are no large values in the QG Leith run, like there are in the idealised model, at least when averaged over 1 day/month.
+
+Writing of data by mass doesn't seem to work if the file is already present in the mass directory?
+- Running without postproc and housekeeping, then move files to JASMIN via sftp.
+
+Run for one month with only daily output, and putting `rho_c=0.03`, consistent with Treguier et al. (2023).

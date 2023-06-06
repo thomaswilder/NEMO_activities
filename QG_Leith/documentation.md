@@ -284,3 +284,8 @@ Wonder if the monthly means are impacting the matlab computations? Lets restart 
 Could try negative 1 in the `lbc_lnk` function for buoyancy gradients on U and V points. Maybe I am telling it to communicate in the wrong direction?
 
 Going to try running the model with 4th order advection scheme for tracers.
+
+### 6th June
+Things possibly to consider:
+- Smooth mixed layer depth somehow e.g. temporal or spatial average.
+- Add a max viscosity value that could be user defined and informed by horizontal resolution.
