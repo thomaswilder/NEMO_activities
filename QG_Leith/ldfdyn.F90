@@ -643,30 +643,28 @@ CONTAINS
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = 2, jpim1
-                     zztmpx = r1_2 * ( r1_e1f(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) )            &
-                        &                 + r1_e1f(ji,jj) * ( zwz(ji,jj,jk) - zwz(ji-1,jj,jk) ) )
-                     zztmpy = r1_2 * ( r1_e2f(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) )            &
-                        &                 + r1_e2f(ji,jj) * ( zwz(ji,jj,jk) - zwz(ji,jj-1,jk) ) )
-                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * tmask(ji,jj,jk)
+                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                        &            + ( r1_e1u(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                     zztmpy = r1_2 * ( ( r1_e2v(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                        &            + ( r1_e2v(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1. )
-!            !
-!            CALL div_hor( kt )
             !
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)    &
-                        &               - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
-                        &               + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
-                        &               - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
-                        &            * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
+                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)      &
+                        &                 - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
+                        &                 + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
+                        &                 - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
+                        &                 * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
                   END DO  
                END DO  
-               END DO
+            END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
             !
@@ -674,14 +672,16 @@ CONTAINS
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
-                     zztmpx = r1_2 * ( r1_e1t(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) )               &
-                        &  + r1_e1t(ji,jj) * ( hdivnqg(ji+1,jj,jk) - hdivnqg(ji,jj,jk) ) )
-                     zztmpy = r1_2 * ( r1_e2t(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) )               &
-                        &  + r1_e2t(ji,jj) * ( hdivnqg(ji,jj+1,jk) - hdivnqg(ji,jj,jk) ) )
-                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * fmask(ji,jj,jk)
+                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
+                     zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
+                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
+            !
+            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
             !
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
@@ -753,10 +753,8 @@ CONTAINS
                END DO
             END DO
             !
-            !== Assess the depth of the mixed layer. For jpk within mixed layer, choose 2D Leith routine, if below, choose QG Routine ==!
-            !== Within mixed layer and at ocean bottom => 2D Leith scheme ==!
-            !== begin calculation of stretching term d/dz[(f/(N**2))*b] ==!
-            ! find buoyancy and interpolate onto w-grid !
+            !== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
+            !== find buoyancy and interpolate onto w-grid ==!
             DO jk = 1, jpkm1
                DO jj = 1, jpj
                   DO ji = 1, jpi
@@ -767,24 +765,19 @@ CONTAINS
                         !== buoyancy below surface ==!
                         zbuup = - grav * prd(ji,jj,jk-1)
                         zbulw = - grav * prd(ji,jj,jk  )
-                        zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw )
+                        zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
                      ENDIF
                   END DO
                END DO
             END DO
-!            !
-!            CALL lbc_lnk_multi( 'ldfdyn', zbu, 'T', 1. )
             !
             !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
-                     !== are we below the mixed layer? ==!
-                     !!IF( jk > nmln(ji,jj) ) THEN
                      !== gradients of buoyancy on U and V grid at w point of cell ==!
-                     zbudxup(ji,jj,jk) = r1_e1t(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) )
-                     zbudyvp(ji,jj,jk) = r1_e2t(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) )
-                     !!ENDIF
+                     zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
+                     zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
                   END DO
                END DO
             END DO
@@ -792,15 +785,12 @@ CONTAINS
             CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1. )
             CALL lbc_lnk_multi( 'ldfdyn', zbudyvp, 'V', 1. )
             !
-            !== gradients of buoyancy on T- points ==!
+            !== gradients of buoyancy on W- points ==!
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = 2, jpim1
-                     !== are we below the mixed layer? ==!
-                     !!IF( jk > nmln(ji,jj) ) THEN
-                     zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) )
-                     zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) )
-                     !!ENDIF
+                     zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
+                     zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
                   END DO
                END DO
             END DO
@@ -813,49 +803,38 @@ CONTAINS
                DO jj = 1, jpj
                   DO ji = 1, jpi
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
                         !== vertical gradient of x component ==!
                         zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                         zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-                        zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                        zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
                         !== vertical gradient of y component ==!
                         zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
                         zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-                        zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3w_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                        zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
                      ENDIF
                   END DO
                END DO
             END DO
-!            !
-!            CALL lbc_lnk_multi( 'ldfdyn', zstx, 'T', 1. )
-!            CALL lbc_lnk_multi( 'ldfdyn', zsty, 'T', 1. )
             !
             !== calculate vertical vorticity (f+zeta) on f-point ==!
-            !== calculate meridional gradient of coriolis parameter f and add to zwzdy ==!
             DO jk = 1, jpkm1                                 ! Horizontal slab
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1   ! vector opt.
-                     !== are we in the mixed layer or at the ocean bottom? ==!
-!                     IF( jk <= nmln(ji,jj) .OR. jk == jpkm1 ) THEN
                      zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
                         &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-!                     ELSE
-!                        !== are we below the mixed layer? ff_f(ji,jj) + meridional gradient? ==!
-!                        zwz(ji,jj,jk) = (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
-!                           &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-!                     ENDIF
                   END DO
                END DO
             END DO
             !
-            !== calculate horizontal gradient of vertical vorticity on t-point ==!
+            !== calculate horizontal gradient of vertical vorticity and average onto t-point ==!
             DO jk = 1, jpkm1
                DO jj = 2, jpj
                   DO ji = 2, jpi
-                     zwzdx(ji,jj,jk) = r1_2 * ( r1_e1f(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) )            &
-                        &                 + r1_e1f(ji,jj) * ( zwz(ji,jj,jk) - zwz(ji-1,jj,jk) ) )
-                     zwzdy(ji,jj,jk) = r1_2 * ( r1_e2f(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) )            &
-                        &                 + r1_e2f(ji,jj) * ( zwz(ji,jj,jk) - zwz(ji,jj-1,jk) ) )
+                     zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1u(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                        &                     + ( r1_e1u(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                     zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2v(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                        &                     + ( r1_e2v(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
                   END DO
                END DO
             END DO
@@ -877,14 +856,14 @@ CONTAINS
                      !== averaging square of buoyancy frequency onto t-grid ==!
                      IF( jk < mbkt(ji,jj) ) THEN
                         !== accounting for negative N^2 ==!
-                        znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) )
+                        znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) ) * tmask(ji,jj,jk)
                      ELSE
                         !== stratification is continuous at bottom ==!
                         znsq = pn2(ji,jj,jk)
                      ENDIF
                      !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-                     rbu(ji,jj,jk) = ( MAX( znsq, zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
-                        &  ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+                     rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
+                        &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
                      !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
                      rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
                   END DO
@@ -899,7 +878,7 @@ CONTAINS
                DO jj = 1, jpj
                   DO ji = 1, jpi
                      !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN
+                     IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
                		   !== x component of stretching ==!
                         zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
                            &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
@@ -928,29 +907,28 @@ CONTAINS
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)    &
-                        &               - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
-                        &               + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
-                        &               - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
-                        &            * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
+                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)      &
+                        &                 - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
+                        &                 + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
+                        &                 - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
+                        &                 * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
                   END DO  
                END DO  
             END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
             !== calculate gradients of divergence, then square of magnitude (f-point) ==!
-!            CALL div_hor( kt )
             !
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
-                     zztmpx = r1_2 * ( r1_e1t(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) )               &
-                        &  + r1_e1t(ji,jj) * ( hdivnqg(ji+1,jj,jk) - hdivnqg(ji,jj,jk) ) )
+                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
                      hdivdx(ji,jj,jk) = zztmpx
-                     zztmpy = r1_2 * ( r1_e2t(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) )               &
-                        &  + r1_e2t(ji,jj) * ( hdivnqg(ji,jj+1,jk) - hdivnqg(ji,jj,jk) ) )
+                     zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
                      hdivdy(ji,jj,jk) = zztmpy
-                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * fmask(ji,jj,jk)
+                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
@@ -963,14 +941,12 @@ CONTAINS
                   DO ji = 1, jpi
                      zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
                      zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
-                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * tmask(ji,jj,jk)
+                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
-!            !
-!            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1. )
             !
-            !== calculate visacosity coefficient ==!
+            !== calculate viscosity coefficient ==!
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.

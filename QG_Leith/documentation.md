@@ -289,3 +289,16 @@ Going to try running the model with 4th order advection scheme for tracers.
 Things possibly to consider:
 - Smooth mixed layer depth somehow e.g. temporal or spatial average.
 - Add a max viscosity value that could be user defined and informed by horizontal resolution.
+
+### 27th June
+Have not considered how to deal with horizontal gradients at/near bathymetry. This may be causing unrealistic values in the viscous coefficient.
+
+Need to make use of module `zpshde.F90` which deals with the interpolation and gradients of tracers for z-coordinate with partial steps.???
+
+Also, `IF( jk > nmlnqg(ji,jj) .AND. jk < ( mbkt(ji,jj) - 1 ) ) THEN` should be `jk < mbkt(ji,jj)` since there are two points at the bottom computed using 2D Leith rather than one.
+
+### 28th June
+Making modifications to `ldfdyn.F90`:
+- Adding in masks to computations, which include `zbu` and its horizontal gradients, and also `zwz` gradients. See Git history for changes.
+- QG Leith is computed for levels to `jk<mbkt`, not `mbkt-1`.
+- Changed scale factors in vorticity gradient from `f` to `u` and `v`. Simiarly for the gradients of divergence and buoyancy. Incorrect scale factor in vertical stretching term, replaced `e3w_n` with `e3t_n`.
