@@ -302,3 +302,26 @@ Making modifications to `ldfdyn.F90`:
 - Adding in masks to computations, which include `zbu` and its horizontal gradients, and also `zwz` gradients. See Git history for changes.
 - QG Leith is computed for levels to `jk<mbkt`, not `mbkt-1`.
 - Changed scale factors in vorticity gradient from `f` to `u` and `v`. Simiarly for the gradients of divergence and buoyancy. Incorrect scale factor in vertical stretching term, replaced `e3w_n` with `e3t_n`.
+
+### 29th June
+In order to compute stretching term daily, we create a subroutine for stretching in `ldfdyn.F90`, and compute it in the `ldfdyn` routine if the counter has stepped through one day.
+- How do I save the stretching term? Check out diagnostic routines.
+
+- Create a variable for stretching in `oce.F90` e.g. `zstlimx_n`
+- Need to consider how a restart will work, possibly use `imo_rstput`? Or will this just recalculate on every restart and then use daily intervals from the restart date? 
+- Use an IF function to compute stretching at right timestep. Also, use IF function in `ldfdyn_init` when allocating arrays. Use `kit000` for first timestep, then check for even timesteps of current timestep over timesteps per day e.g. `kt/108` and plus one so beginning of day, using `IF (MOD(kt,108)=0) THEN` if equal to zero then even and compute stretching term again and store it.
+
+See progress so far in new `ldfdyn.F90`... making new subroutine called `ldf_dyn_str ()`
+
+### 30th June
+Progress so far:
+- Model looked like it blew up on first time step. Couldn't figure out why...
+- Instead, let stretching terms be zero for first day, then compute stretching terms daily thereafter. Model run for 3 days, and stretching terms stay the same throughout the day.
+
+Lets run for one year. Blew up after about 16000 timesteps!
+- Running for 4 months (around 12960 timesteps)
+
+But there needs to be a condition that asks if the model is from a restart.
+- Can we write stretching term to restart...?
+
+But unsure if daily stretching values are appropriate due to model blowing up. What do the monthly outputs look like?
