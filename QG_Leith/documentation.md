@@ -325,3 +325,15 @@ But there needs to be a condition that asks if the model is from a restart.
 - Can we write stretching term to restart...?
 
 But unsure if daily stretching values are appropriate due to model blowing up. What do the monthly outputs look like?
+
+### 3rd July
+Trying a shorter time for stretching calculations -> half day. Fails too on rose suite `u-xc856`.
+
+It could be that the scaling term is computed at every timestep with evolving vorticity gradients, but only the QG stretching term including N^2^ is computed daily.
+- Try an alternative routine that tries this.
+
+New `ldfdyn.F90` routine not writing `zstx` to output file. Perhaps need to initialise the array with zeros, so doing this before the first call of `ldf_dyn_str ()`
+- This fixed it!
+
+`IDEAL_bump` runs for one year with output.
+- Will commit this to QG Leith git repo.
