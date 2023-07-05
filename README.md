@@ -4,7 +4,7 @@ This repository includes subdirectories relating to my own personal projects in 
 
 The code in this repo refers to NEMO v4.0.4 from the [forge.ipsl directory](https://forge.ipsl.jussieu.fr/nemo/svn/NEMO/releases/r4.0/r4.0.4/). One can obtain the source files by using `svn co ...`. A more up-to-date NEMO version (v4.2) is available on [GitLab](https://forge.nemo-ocean.eu/nemo/nemo).
 
-A brief outline is given below of what is included in each subdirectory. Further information is found in each subdirectory, withd details given in each respective `documentation.md`.
+A brief outline is given below of what is included in each subdirectory. Further information is found in each subdirectory, with details given in each respective `documentation.md`.
 
 **IDEAL**
 - In `/IDEAL`, there are `src`, `EXP`, `tools`, and `scripts` for the idealised channel model configuration.
@@ -15,8 +15,9 @@ A brief outline is given below of what is included in each subdirectory. Further
 **QG_Leith**
 - Includes modifications to `ldfdyn.F90` for the implmentation of the Leith schemes in NEMO. 
 - Changes to `step.F90` for the introduction of the Leith Schemes.
+- Additions to `oce.F90` for daily stretching calculations in QG Leith.
 - A `documentation.md` file that documents my progress in coding this up.
-The Leith schemes are still very much in the testing stage and are prone to errors!
+The Leith schemes are still very much in the testing stage and are prone to errors. The 2D Leith scheme appears to run well in both idealised and realistic NEMO setups. The QG Leith runs fine in an idealised setting, but not in a realistic setting.
 
 **ORCA025**
-Work will begin soon...
+The QG Leith scheme in `/QG_Leith` is currently being tested. Watch this space.

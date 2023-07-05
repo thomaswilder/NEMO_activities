@@ -1,5 +1,7 @@
-# Objective
+# Introduction
 Documenting the development of the idealised nemo configuration. The aim is to design a **Neverworld2** configuration, detailed in Marques et al. (2022) in order to test the implementation of QG Leith. We begin with a simple Southern Ocean re-entrant **channel model**.
+
+The idea of this documentation is to come across as a diary of my progress in setting this model up. 
 
 ### Tools
 - Checkout NEMO 4.0.4 from either ipsl.forge or the MOSRS repository.
@@ -19,7 +21,7 @@ Documenting the development of the idealised nemo configuration. The aim is to d
 - Domain size is (L_x, L_y) = (1000, 2000) km with grid spacing of 10 km, so (nx, ny) = (100, 200+2).
 - In the vertical, L_z = 3000 m with nz = 14+1 z-levels. Vertical grid calculated in-house.
 - Ocean bottom is flat (for now).
-- Temperature, salinity, and wind stress are calculated using gen_nemo_ideal_fields.py, a modified J.Mak's _unagi_.py file.
+- Temperature, salinity, and wind stress are calculated using `gen_nemo_ideal_fields.py`, a modified J.Mak's `_unagi_.py` file.
 
 ### Modifying namelist_cfg file
 - Biharmonic viscosity, `rn_Uv = 1` m/s, `rn_Lv = 10.e+3` gives `Am = 8*e+10 m^4/s`.
@@ -66,7 +68,7 @@ n.b. the decision has been made to get the channel model working properly and te
 
 ### (29/11/22)
 - Calculating the sponge layer. Found a bug in `utils.F90` under function `CALL dimlen( ncin, 'z', jpk )`, which should use `nav_lev` for the `z` dimension. Changed this and now a resto.nc file is created. Need to confirm if the resto.nc data is correct. Need to also upload the modified `DMP_TOOLS/src` files.
-- Run `./maketools -m XC_MONSOON_INTEL -n DMP_TOOLS` to generate a `make_dmp_file.exe`. This is then executed using the bash script `mkmeshscript.sh` that produces a `resto.nc` file. See folder `shell_scripts` for this bash script.
+- Run `./maketools -m XC_MONSOON_INTEL -n DMP_TOOLS` to generate a `make_dmp_file.exe`. This is then executed using the bash script `mkmeshscript.sh` that produces a `resto.nc` file. See folder `scripts` for this bash script.
 
 ### (30/11/22)
 - Setting the relaxation at the northern boundary, have included `namtra_dmp` namelist with `ln_tradmp = .true.` and `resto.nc`. Also have to set `ln_tsd_dmp = .true.` in `namtsd` namelist.
@@ -84,7 +86,7 @@ n.b. the decision has been made to get the channel model working properly and te
 - If `nn_stock=0` then `rebuild_nemo` does not work. Needs to be set to the number of iterations for the model to run.
 
 ### (7/12/22)
-The shell scripts in [this folder](shell_scripts) will allow the running of multiple nemo jobs in Monsoon2. The order of jobs can be found in `submit_N_nemo.sh`. The idea behind this is to enable an 800 year spin up within the constraints of a 4 hour wallclock limit on Monsoon2. Shorter running jobs are set with a higher priority.
+The shell scripts in [this folder](scripts) will allow the running of multiple nemo jobs in Monsoon2. The order of jobs can be found in `submit_N_nemo.sh`. The idea behind this is to enable an 800 year spin up within the constraints of a 4 hour wallclock limit on Monsoon2. Shorter running jobs are set with a higher priority.
 - Have set up 8 jobs on Monsoon2 each running 50 years in length for a total of 400 years...
 
 ### (8/12/22)
@@ -275,3 +277,15 @@ Incorrect biharmonic viscosity chosen. In GO8, they use `nn_ahm_ijk_t = 20`, not
 When running the QG Leith simulations, noisy patterns appear in the southern part of the domain. This is possibly a result of low stratification and QG Leith dependence on square of buoyancy frequency. In response to this, have introduced a background salinity profile that linearly varies with depth, with values of 34.6 at the surface, and 35.2 at depth.
 - Running IDEAL for one year with QG Leith viscosity.
 - Doesn't seem to solve the issue. Still large values of visc coeff below mixed layer.
+
+
+## An eddy-permitting channel model
+
+### 5/7/23
+When testing the QG Leith scheme in the ORCA025 configuration, the model blows up. Two iterations of the scheme have been tested in ORCA025: stretching computed every timestep; and stretching computed daily. Both blow up. However, they do not cause the idealised model to blow up. I wonder if the stability of the scheme is dependent on resolution? Bachman et al. (2017) looked at submesoscale, Pearson et al. (2017) looked at eddy-resolving. We are looking at eddy-permitting.
+
+We set up an eddy-permitting `IDEAL` configuration:
+- Create initial conditions,
+- Create `domcfg` file from `bathy_meter.nc` in `tools/DOMAINcfg`,
+- Create `mesh_mask.nc` then `resto.nc`,
+- Test QG Leith...

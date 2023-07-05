@@ -195,7 +195,7 @@ _pmiu_daemon(SIGCHLD): [NID 06768] [c7-2c0s12n0] [Mon Jun  5 15:41:51 2023] PE R
 [FAIL] run_model # return-code=137
 2023-06-05T15:42:12Z CRITICAL - failed/EXIT
 ```
-Above error (code 137) could be caused excessive memory usage.
+Above error (code 137) could be caused excessive memory usage. No, model blowing up.
 
 ### 6th June
 Maybe try and run the QG Leith routine for one day.
@@ -216,3 +216,89 @@ Writing of data by mass doesn't seem to work if the file is already present in t
 - Running without postproc and housekeeping, then move files to JASMIN via sftp.
 
 Run for one month with only daily output, and putting `rho_c=0.03`, consistent with Treguier et al. (2023).
+
+
+### 7th June
+QG Leith simulation failing at day 19 (kt = 901) with large velocities in the Mediterranean (i,j,k = 1255,854,31) i.e. |U| = 10.22> 10 m/s.
+
+Error above (5th June) implies model blowing up. Unsure how to proceed.
+
+
+### 13th June
+`namelist_cfg` found in `app/nemo/rose-app.conf`.
+
+Running QG Leith for 1 month with additional diagnostics
+- Issues with files with monthly cycle and 1 day output in one file.
+
+Try again with daily cycles...
+
+
+### 15th June
+Plotting data.
+- Need to output mask file so need to run for one day. 
+- Choosing `ln_meshmask=.true.` in `app/nemo/rose-app.conf`.
+
+
+### 19th June 
+- Issues of large viscosity similar to the idealised model. 
+- Stretching term a few orders of magnitude bigger than the planetary vorticity gradients.
+
+
+### 20th June
+Modifying tke scheme so `rn_efr=0.15` and seeing what impact this has on QG Leith simulation.
+- Run from scratch for 1 month using daily output.
+
+
+### 21st June
+Model runs successfully without error for 1 month.
+
+Using `rn_efr=0.15` deepens the mixed layer and reduces the viscosity below the mixed layer too.
+- Do we want a deeper mixed layer though?
+
+We will try using the spun up restart files in a new rose suite (copy u-cr756).
+- Add restart directory to `nemo/Restart files`
+
+
+### 22nd June
+Model seems to run from the restart files but outputs blank QG Leith diagnostics...? Fixed!
+
+
+### 23rd June
+- Model runs well for one month, with daily output and daily cycles
+- Going to set it to run for one year with monthly output, reducing the QG Leith diagnostics for file size.
+- When setting monthly cycles the model (u-cx856) blows up at timestep `kt = 1158` at index (i, j, k = 1133, 1190, 30) with large velocity `U max 11.66`.
+
+But why does it run with daily cycles and not monthly??
+
+Will u-cr756 with modified tke parameters run for a month from rest with a monthly cycle?
+
+
+### 27th June
+Going to output horizontal gradients after one day: `zwzdx`, `zwzdy`, `zbudx`, `zbudy` ... and examine values at boundary bottom. Do we need to modify how we compute horizontal gradients near boundaries?
+
+
+### 3rd July
+Going to try the modified `ldfdyn.F90` that includes the daily stretching calculation. Need to add `ldfdyn.F90`, `oce.F90`, and `step.F90` to the branch on Met Office.
+
+Not compiling with new source files. Failing on both `fcm_make2...` with
+`[FAIL] no configuration specifid or found`
+
+Sometimes `fcm_make2_drivers does succeed.
+
+I wonder if it takes time for new svn commit to update. Try again later.
+
+
+### 4th July
+Pick up the model after one month complete and use monthly cycle and diagnostics. Fails.
+
+QG Leith viscosity looks good, spatially varying. Still some very large values, maybe they're an artefact of the eddy-permitting resolution? Could be interesting to try this in the ORCA12 (eddy-resolving), which can be found [here](https://code.metoffice.gov.uk/trac/GO/wiki/GOJobs/u-cm491).
+
+Picking up after one month but using daily cycles with daily output for a further month... The model picked up from the 19760201_restart in nemo_restarts directory.
+
+Set model to run for three months with 5 daily output and monthly cycle...
+
+
+### 5th July
+Model blew up after day 20 with large velocities. 
+
+Going to create a new IDEAL configuration at eddy permitting resolution and test QG Leith in that.
