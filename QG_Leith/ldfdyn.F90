@@ -471,8 +471,8 @@ CONTAINS
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt                                             ! time step index
       INTEGER, INTENT(in) ::   kit000                                         ! first time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! Brunt-Vaisala frequency (locally ref.)
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! now in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
       REAL(wp)                               ::   zrho3   = 0.03_wp           ! density     criterion for mixed layer depth
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
@@ -814,8 +814,8 @@ CONTAINS
 					DO jj = 2, jpj
 						DO ji = 2, jpi
 						   !== grid scale velocity squared ==!
-						   zztmpx = 0.5 * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
-						   zztmpy = 0.5 * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
+						   zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
+						   zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
 						   zusq =  zztmpx**2 + zztmpy**2
 						   !== square of Rossby number U^2/(f^2 * A) ==!
 						   rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
@@ -991,8 +991,8 @@ CONTAINS
       !! ** action  :   zstlimx, zstlimy updated daily
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt   ! time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! Brunt-Vaisala frequency (locally ref.)
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! now in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
       REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zstx                       ! Stretching in x direction
       REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zsty                       ! Stretching in y direction
       !

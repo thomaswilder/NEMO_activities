@@ -337,3 +337,10 @@ New `ldfdyn.F90` routine not writing `zstx` to output file. Perhaps need to init
 
 `IDEAL_bump` runs for one year with output.
 - Will commit this to QG Leith git repo.
+
+
+### 6th July
+I wonder if the use of `prd` and `bn2` at the before timestep are causing the numerical issues in ORCA025?
+- Modify the input of these terms in `step.F90`.
+
+ORCA025 has run without error for one month. SUCCESS.
