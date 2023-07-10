@@ -782,8 +782,7 @@ CONTAINS
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1. )
-            CALL lbc_lnk_multi( 'ldfdyn', zbudyvp, 'V', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
             !
             !== gradients of buoyancy on W- points ==!
             DO jk = 1, jpkm1
@@ -795,8 +794,7 @@ CONTAINS
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1. )
-            CALL lbc_lnk_multi( 'ldfdyn', zbudy, 'T', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1. )
             !
             !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
             DO jk = 1, jpkm1
@@ -839,8 +837,7 @@ CONTAINS
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1. )
-            CALL lbc_lnk_multi( 'ldfdyn', zwzdy, 'T', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1.  )
             !
             !== calculate the Burger number and square of Rossby number on t-point ==!
             !== calculate over entire domain for diagnostics ==!
@@ -870,8 +867,7 @@ CONTAINS
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1. )
-            CALL lbc_lnk_multi( 'ldfdyn', rbu, 'T', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1. )
             !
             !== are we in the QG limit? Find the stretching value in x and y components ==!
             DO jk = 1, jpkm1
