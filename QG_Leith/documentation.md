@@ -1,10 +1,14 @@
-## QG Leith Implementation
-Should have started this a long time ago... 
+## Documenting QG Leith Implementation
 
-Currently the routine is correctly called using the namelist parameters. The routine leans heavily on Scott Bachman's implementation in MITgcm.
+This documents the development: 
+1) QG leith viscosity parameterisation,
+2) Using Leith coefficients in the Gent-McWilliams scheme,
 
-See also the `documentation.md` file in `IDEAL` repo [here](https://github.com/thomaswilder/nemo-IDEAL) for further details on model setup to test the Leith schemes.
+The QG Leith viscosity implementation makes use of MITgcm implementation and work by Bachman et al. (2017) and Pearson et al. (2017).
 
+See also the `documentation.md` files in `IDEAL` folder [here](https://github.com/thomaswilder/nemo-IDEAL) and `ORCA025` folder for further details on model setup to test the Leith schemes.
+
+### QG Leith viscosity
 ### 20/02/23
 - Need to figure out how to output diagnostics for terms in the QG Leith routine to establish why it is not working. Spatial maps will help greatly. Have asked this question to the nemo discourse community.
 - The routine works when modifying `step.F90` and calling `bn2` and `eos` so `ldf_dyn` inputs density and buoyancy frequency into the QG Leith routine. However, some other routines e.g. `ldftra.F90` include `rn2` without inputting or calling buoyancy frequency squared from `step.F90`. So need to figure this out.
@@ -344,3 +348,22 @@ I wonder if the use of `prd` and `bn2` at the before timestep are causing the nu
 - Modify the input of these terms in `step.F90`.
 
 ORCA025 has run without error for one month. SUCCESS.
+
+
+### 10th July
+... almost. ORCA025 crashed.
+
+Reverting back to stretching calculations at every timestep, but using now temp and sal fields.
+
+ORCA025 blows up with large velocities.
+
+
+### 11th July
+Have written in daily stretching calculations.
+- Revision 16286
+
+Model appears to break at first timestep... 
+
+
+## Leith as GM
+In NEMO, GM coefficients are computed in `OCE/LDF/ldftra.f90`.
