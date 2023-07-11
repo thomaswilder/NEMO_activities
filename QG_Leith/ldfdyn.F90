@@ -13,6 +13,7 @@ MODULE ldfdyn
    !!----------------------------------------------------------------------
    !!   ldf_dyn_init  : initialization, namelist read, and parameters control
    !!   ldf_dyn       : update lateral eddy viscosity coefficients at each time step 
+   !!   ldf_dyn_str   : update stretching term daily for use in QG Leith
    !!----------------------------------------------------------------------
    USE oce             ! ocean dynamics and tracers   
    USE dom_oce         ! ocean space and time domain 
@@ -33,6 +34,7 @@ MODULE ldfdyn
 
    PUBLIC   ldf_dyn_init   ! called by nemogcm.F90
    PUBLIC   ldf_dyn        ! called by step.F90
+   PUBLIC   ldf_dyn_str    ! called by ldf_dyn
 
    !                                    !!* Namelist namdyn_ldf : lateral mixing on momentum *
    LOGICAL , PUBLIC ::   ln_dynldf_OFF   !: No operator (i.e. no explicit diffusion)
@@ -75,7 +77,7 @@ MODULE ldfdyn
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ddivmagsq    !: square of magnitude of gradient of divergence (2D/QG Leith)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivnqg      !: Horizontal divergence on t-point (2D/QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwz          !: Vorticity on f-point (2D/QG Leith)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstx, zsty   !: x and y components of stretching at T- points (QG Leith)
+!!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstx, zsty   !: x and y components of stretching at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwzdx, zwzdy !: x and y components of horizontal gradients of vertical vorticity at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivdx, hdivdy !: x and y components of horizontal gradients of divergence  at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
@@ -386,7 +388,7 @@ CONTAINS
             !                          ! allocate arrays used in ldf_dyn. 
             ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
                &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
-               &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,           &
+               &  zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) ,                                                         &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
                &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                &
@@ -409,8 +411,8 @@ CONTAINS
             zbudyvp(:,:,:) = 0._wp
             zbudx(:,:,:) = 0._wp
             zbudy(:,:,:) = 0._wp
-            zstx(:,:,:) = 0._wp
-            zsty(:,:,:) = 0._wp
+!!            zstx(:,:,:) = 0._wp
+!!            zsty(:,:,:) = 0._wp
             zstlimx(:,:,:) = 0._wp
             zstlimy(:,:,:) = 0._wp
             zwz(:,:,:) = 0._wp
@@ -446,7 +448,7 @@ CONTAINS
    END SUBROUTINE ldf_dyn_init
 
 
-   SUBROUTINE ldf_dyn( kt, prd, pn2 )
+   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2 )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_dyn  ***
       !! 
@@ -467,9 +469,10 @@ CONTAINS
       !! ** note    :    in BLP cases the sqrt of the eddy coef is returned, since bilaplacian is en re-entrant laplacian
       !! ** action  :    ahmt, ahmf   updated at each time step
       !!----------------------------------------------------------------------
-      INTEGER, INTENT(in) ::   kt   ! time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! Brunt-Vaisala frequency (locally ref.)
+      INTEGER, INTENT(in) ::   kt                                             ! time step index
+      INTEGER, INTENT(in) ::   kit000                                         ! first time step index
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! now in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
       REAL(wp)                               ::   zrho3   = 0.03_wp           ! density     criterion for mixed layer depth
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
@@ -477,9 +480,8 @@ CONTAINS
       REAL(wp) ::   zu2pv2_ij_p1, zu2pv2_ij, zu2pv2_ij_m1, zemax   ! local scalar (option 31)
       REAL(wp) ::   zcmsmag, zstabf_lo, zstabf_up, zdelta, zdb     ! local scalar (option 32)
       REAL(wp) ::   zcm2dl, zsq2d , zztmpx, zztmpy                 ! local scalar (option 33)
-      REAL(wp) ::   zcmqgl, zbuup, zbulw, zusq, znsq               ! local scalar (option 34)
-      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2, zsqqg          ! more local scalar (option 34)
-      REAL(wp) ::   zztmp, zzdep                                   ! temporary scalars inside do loop (option 34)
+      REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep                    ! local scalar (option 34)
+      REAL(wp) ::   zqglep1, zqglep2, zusq, znsq                   ! local scalar (option 34)
       !!----------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('ldf_dyn')
@@ -714,8 +716,8 @@ CONTAINS
             !
             ! allocate local variables !
             zcmqgl = (rn_cqgc/rpi)**6         			! (C_qg/pi)^6
-            zqglep1 = 1.e-12_wp
-            zqglep2 = 1.e-24_wp
+				zqglep1 = 1.e-12_wp
+				zqglep2 = 1.e-24_wp
             !
             !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
             ! initialization
@@ -753,68 +755,6 @@ CONTAINS
                END DO
             END DO
             !
-            !== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
-            !== find buoyancy and interpolate onto w-grid ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpj
-                  DO ji = 1, jpi
-                     IF( jk < 2 ) THEN
-                        !== buoyancy at surface ==!
-                        zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
-                     ELSE
-                        !== buoyancy below surface ==!
-                        zbuup = - grav * prd(ji,jj,jk-1)
-                        zbulw = - grav * prd(ji,jj,jk  )
-                        zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
-                     ENDIF
-                  END DO
-               END DO
-            END DO
-            !
-            !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
-                     !== gradients of buoyancy on U and V grid at w point of cell ==!
-                     zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
-                     zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
-            !
-            !== gradients of buoyancy on W- points ==!
-            DO jk = 1, jpkm1
-               DO jj = 2, jpjm1
-                  DO ji = 2, jpim1
-                     zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
-                     zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1. )
-            !
-            !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpj
-                  DO ji = 1, jpi
-                     !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
-                        !== vertical gradient of x component ==!
-                        zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
-                        zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-                        zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
-                        !== vertical gradient of y component ==!
-                        zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
-                        zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-                        zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
-                     ENDIF
-                  END DO
-               END DO
-            END DO
-            !
             !== calculate vertical vorticity (f+zeta) on f-point ==!
             DO jk = 1, jpkm1                                 ! Horizontal slab
                DO jj = 1, jpjm1
@@ -837,68 +777,97 @@ CONTAINS
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1.  )
+            CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
+            !
+            !== Compute stretching term at first time step index and then at daily intervals ==!
+            IF( kt == kit000 ) THEN       !! compute stretching subroutine
+               !
+               IF(lwp) WRITE(numout,*) 'The first timestep is', kit000
+               IF(lwp) WRITE(numout,*) 'prd at (300,100,18) is', prd(300,100,18)
+               IF(lwp) WRITE(numout,*) 'pn2 at (300,100,18) is', pn2(300,100,18)
+               !! Output some values for prd, pn2, zwzdx ... here 
+               !
+               zstx(:,:,:) = 0._wp
+               zsty(:,:,:) = 0._wp
+               !
+               CALL ldf_dyn_str( kt, prd, pn2, zstx, zsty )
+               !
+               IF(lwp) WRITE(numout,*) 'zstx at (300,100,18) is', zstx(300,100,18)
+               IF(lwp) WRITE(numout,*) 'zsty at (300,100,18) is', zsty(300,100,18)
+               !
+            ELSEIF( MOD(kt-1,108) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
+               !
+               IF(lwp) WRITE(numout,*) 'The timestep is', kt
+               IF(lwp) WRITE(numout,*) 'prd at (300,100,18) is', prd(300,100,18)
+               IF(lwp) WRITE(numout,*) 'pn2 at (300,100,18) is', pn2(300,100,18)
+               !
+               CALL ldf_dyn_str( kt, prd, pn2, zstx, zsty )
+               !
+               IF(lwp) WRITE(numout,*) 'zstx at (300,100,18) is', zstx(300,100,18)
+               IF(lwp) WRITE(numout,*) 'zsty at (300,100,18) is', zsty(300,100,18)
+               !
+            ENDIF
             !
             !== calculate the Burger number and square of Rossby number on t-point ==!
-            !== calculate over entire domain for diagnostics ==!
-            DO jk = 1, jpkm1
-               DO jj = 2, jpj
-                  DO ji = 2, jpi
-                     !== grid scale velocity squared ==!
-                     zztmpx = 0.5 * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
-                     zztmpy = 0.5 * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
-                     zusq =  zztmpx**2 + zztmpy**2
-                     !== square of Rossby number U^2/(f^2 * A) ==!
-                     rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
-                     !== averaging square of buoyancy frequency onto t-grid ==!
-                     IF( jk < mbkt(ji,jj) ) THEN
-                        !== accounting for negative N^2 ==!
-                        znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) ) * tmask(ji,jj,jk)
-                     ELSE
-                        !== stratification is continuous at bottom ==!
-                        znsq = pn2(ji,jj,jk)
-                     ENDIF
-                     !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-                     rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
-                        &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
-                     !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
-                     rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1. )
-            !
-            !== are we in the QG limit? Find the stretching value in x and y components ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpj
-                  DO ji = 1, jpi
-                     !== are we below the mixed layer and above the sea floor? ==!
-                     IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
-               		   !== x component of stretching ==!
-                        zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-                           &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-                        tmpzstx(ji,jj,jk) = ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                 &
-                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 )
-!!                        zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-!!                           &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
-!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
-!!                        tmpzstx(ji,jj,jk) = zwzdx(ji,jj,jk)/                                       &
-!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 )
-                        zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
-                        !== y component of stretching ==!
-                        zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-                           &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-                           &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-!!                        zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-!!                           &  ABS( ( zwzdy(ji,jj,jk) ) /                                           &
-!!                          &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
-                        zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
-                     ENDIF
-                  END DO
-               END DO
-            END DO
+				!== calculate over entire domain for diagnostics ==!
+				DO jk = 1, jpkm1
+					DO jj = 2, jpj
+						DO ji = 2, jpi
+						   !== grid scale velocity squared ==!
+						   zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
+						   zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
+						   zusq =  zztmpx**2 + zztmpy**2
+						   !== square of Rossby number U^2/(f^2 * A) ==!
+						   rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
+						   !== averaging square of buoyancy frequency onto t-grid ==!
+						   IF( jk < mbkt(ji,jj) ) THEN
+						      !== accounting for negative N^2 ==!
+						      znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) ) * tmask(ji,jj,jk)
+						   ELSE
+						      !== stratification is continuous at bottom ==!
+						      znsq = pn2(ji,jj,jk)
+						   ENDIF
+						   !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
+						   rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
+						      &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+						   !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
+						   rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
+						END DO
+					END DO
+				END DO
+				!
+				CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1.  )
+				!
+				!== are we in the QG limit? Find the stretching value in x and y components ==!
+				DO jk = 1, jpkm1
+					DO jj = 1, jpj
+						DO ji = 1, jpi
+						   !== are we below the mixed layer and above the sea floor? ==!
+						   IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
+								!== x component of stretching ==!
+						      zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
+						         &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+						         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+			!!                  tmpzstx(ji,jj,jk) = ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                 &
+			!!                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 )
+			!!                        zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
+			!!                           &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
+			!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
+			!!                        tmpzstx(ji,jj,jk) = zwzdx(ji,jj,jk)/                                       &
+			!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 )
+						      zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
+						      !== y component of stretching ==!
+						      zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
+						         &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+						         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+			!!                        zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
+			!!                           &  ABS( ( zwzdy(ji,jj,jk) ) /                                           &
+			!!                          &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
+						      zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
+						   ENDIF
+						END DO
+					END DO
+				END DO
             !
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
@@ -932,6 +901,10 @@ CONTAINS
             CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
             !
             !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
+            !
+            IF(lwp) WRITE(numout,*) 'zstlimx at (300,100,18) is', zstlimx(300,100,18)
+            IF(lwp) WRITE(numout,*) 'zstlimy at (300,100,18) is', zstlimy(300,100,18)
+            !
             DO jk = 1, jpkm1
                DO jj = 1, jpj
                   DO ji = 1, jpi
@@ -973,10 +946,10 @@ CONTAINS
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
          !== QG Leith diagnostics ==!
-         CALL iom_put( "rro2"   , rro2(:,:,:) )      ! square of Rossby number T- point
-         CALL iom_put( "rbu"    , rbu(:,:,:) )       ! Burger number T- point
-         CALL iom_put( "rfr2"   , rfr2(:,:,:) )      ! square of Froude number T- point
-         CALL iom_put( "zstx"   , zstx(:,:,:) )      ! x component of QG stretching T- point
+         CALL iom_put( "rro2"    , rro2(:,:,:) )      ! square of Rossby number T- point
+         CALL iom_put( "rbu"     , rbu(:,:,:) )       ! Burger number T- point
+         CALL iom_put( "rfr2"    , rfr2(:,:,:) )      ! square of Froude number T- point
+         CALL iom_put( "zstx"    , zstx(:,:,:) )      ! x component of QG stretching T- point
          CALL iom_put( "zsty"    , zsty(:,:,:) )      ! y component of QG stretching T- point
          CALL iom_put( "zstlimx" , zstlimx(:,:,:) )   ! x component of QG stretching T- point
          CALL iom_put( "zstlimy" , zstlimy(:,:,:) )   ! y component of QG stretching T- point
@@ -987,7 +960,7 @@ CONTAINS
          CALL iom_put( "zwz"     , zwz(:,:,:) )       ! QG vorticity at F- point
          CALL iom_put( "zbudx"   , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
          CALL iom_put( "zbudy"   , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
-         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
+!!         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
          CALL iom_put( "mld_qg"  , mld_qg(:,:) )      ! QG Leith mixed layer depth
          CALL iom_put( "ahmt_qg" , ahmt_qg(:,:,:) )   ! PV contribution to QG Leith T-point
          CALL iom_put( "ahmt_div", ahmt_div(:,:,:) )  ! Div contribution to QG Leith T-point
@@ -1002,6 +975,103 @@ CONTAINS
       IF( ln_timing )   CALL timing_stop('ldf_dyn')
       !
    END SUBROUTINE ldf_dyn
+   
+   
+   SUBROUTINE ldf_dyn_str( kt, prd, pn2, zstx, zsty )
+      !!----------------------------------------------------------------------
+      !!                  ***  ROUTINE ldf_dyn_str  ***
+      !! 
+      !! ** Purpose :   compute stretching term for QG Leith viscosity
+      !!
+      !! ** Method  :   Input instantaneous density (prd), square of buoyancy frequency (pn2), and 
+      !!                gradients of vorticity (zwz + f), then compute stretching term. 
+      !!                The stretching term is then stored and remains constant for one whole day.          
+      !!
+      !! ** note    :    
+      !! ** action  :   zstlimx, zstlimy updated daily
+      !!----------------------------------------------------------------------
+      INTEGER, INTENT(in) ::   kt   ! time step index
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! now in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
+      REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zstx                       ! Stretching in x direction
+      REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zsty                       ! Stretching in y direction
+      !
+      INTEGER  ::   ji, jj, jk   ! dummy loop indices
+      REAL(wp) ::   zbuup, zbulw                    ! local scalar (option 34)
+      REAL(wp) ::   zker1, zker2, zqglep1          ! more local scalar (option 34)
+      !!----------------------------------------------------------------------
+      !
+      zqglep1 = 1.e-12_wp
+      !
+      !== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
+      !== find buoyancy and interpolate onto w-grid ==!
+      DO jk = 1, jpkm1
+         DO jj = 1, jpj
+            DO ji = 1, jpi
+               IF( jk < 2 ) THEN
+                  !== buoyancy at surface ==!
+                  zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
+               ELSE
+                  !== buoyancy below surface ==!
+                  zbuup = - grav * prd(ji,jj,jk-1)
+                  zbulw = - grav * prd(ji,jj,jk  )
+                  zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
+               ENDIF
+            END DO
+         END DO
+      END DO
+      !
+      !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
+      DO jk = 1, jpkm1
+         DO jj = 1, jpjm1
+            DO ji = 1, jpim1
+               !== gradients of buoyancy on U and V grid at w point of cell ==!
+               zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
+               zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
+            END DO
+         END DO
+      END DO
+      !
+      CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
+      !
+      !== gradients of buoyancy on W- points ==!
+      DO jk = 1, jpkm1
+         DO jj = 2, jpjm1
+            DO ji = 2, jpim1
+               zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
+               zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
+            END DO
+         END DO
+      END DO
+      !
+      IF(lwp) WRITE(numout,*) 'zbudx at (300,100,18) is', zbudx(300,100,18)
+      IF(lwp) WRITE(numout,*) 'zbudy at (300,100,18) is', zbudy(300,100,18)
+      !
+      CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1.  )
+      !
+      !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
+      DO jk = 1, jpkm1
+         DO jj = 1, jpj
+            DO ji = 1, jpi
+               !== are we below the mixed layer and above the sea floor? ==!
+               IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
+                  !== vertical gradient of x component ==!
+                  zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
+                  zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
+                  zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                  !== vertical gradient of y component ==!
+                  zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
+                  zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
+                  zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+               ENDIF
+            END DO
+         END DO
+      END DO
+      !
+      IF(lwp) WRITE(numout,*) 'zstx at (300,100,18) is', zstx(300,100,18)
+      IF(lwp) WRITE(numout,*) 'zsty at (300,100,18) is', zsty(300,100,18)
+      !
+   END SUBROUTINE
 
    !!======================================================================
 END MODULE ldfdyn

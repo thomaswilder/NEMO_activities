@@ -153,7 +153,7 @@ CONTAINS
       IF( l_ldftra_time .OR. l_ldfeiv_time )   CALL ldf_tra( kstp )       !       and/or eiv coeff.
       IF( l_ldfdyn_time                    ) THEN
       														 CALL eos( tsn, rhd, gdept_n(:,:,:) )   ! now in-situ density for QG Leith
-      														 CALL ldf_dyn( kstp, rhd , rn2 )        ! eddy viscosity coeff. 
+      														 CALL ldf_dyn( kstp, nit000, rhd , rn2 )       ! eddy viscosity coeff. 
     	ENDIF
       !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       !  Ocean dynamics : hdiv, ssh, e3, u, v, w
