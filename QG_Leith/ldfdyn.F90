@@ -363,7 +363,9 @@ CONTAINS
             !
             !                          ! allocate arrays used in ldf_dyn. 
             ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,      &
-               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rre(jpi,jpj,jpk) , STAT=ierr )
+               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                              &
+               &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,     &
+               &  STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate 2D Leith arrays')
             !
             DO jj = 1, jpj             ! Set local gridscale values
@@ -374,11 +376,17 @@ CONTAINS
             END DO
             !
             !== initialise key variables with zeros ==!
+            dwzmagsq(:,:,:) = 0._wp
+            ddivmagsq(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             zwz(:,:,:) = 0._wp
             dwzmagsq(:,:,:) = 0._wp
             ddivmagsq(:,:,:) = 0._wp
             rre(:,:,:) = 0._wp
+            zwzdx(:,:,:) = 0._wp
+            zwzdy(:,:,:) = 0._wp
+            hdivdx(:,:,:) = 0._wp
+            hdivdy(:,:,:) = 0._wp
             !
          CASE(  34  )       !==  time varying 3D field  ==!
             IF(lwp) WRITE(numout,*) '   ==>>>   eddy viscosity = F( latitude, longitude, depth , time )'
@@ -646,16 +654,18 @@ CONTAINS
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = 2, jpim1
-                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                        &            + ( r1_e1u(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                     zztmpy = r1_2 * ( ( r1_e2v(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                        &            + ( r1_e2v(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+                     zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                        &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                     zwzdx(ji,jj,jk) = zztmpx
+                     zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                        &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+                     zwzdy(ji,jj,jk) = zztmpy
                      dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
             !
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
@@ -676,15 +686,17 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, jpim1
                      zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
+                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
+                     hdivdx(ji,jj,jk) = zztmpx
                      zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
+                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
+                     hdivdy(ji,jj,jk) = zztmpy
                      ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
             !
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
@@ -712,8 +724,8 @@ CONTAINS
          !
          ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
          DO jk = 1, jpkm1
-			   DO jj = 2, jpj
-				   DO ji = 2, jpi
+			   DO jj = 2, jpjm1
+				   DO ji = 2, jpim1
 				      !== grid scale velocity ==!
 				      zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
 				      zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
@@ -727,6 +739,10 @@ CONTAINS
          !
          !== 2D Leith diagnostics ==!
          CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
+         CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
+         CALL iom_put( "zwzdy"   , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
+         CALL iom_put( "hdivdx"  , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
+         CALL iom_put( "hdivdy"  , hdivdy(:,:,:) )    ! y component of divergence gradient T- point
          !
          !
       CASE(  34  )       !==  time varying 3D field  ==!   = F(QG PV gradient, divergence, and gridscale) (QG Leith)
@@ -782,14 +798,14 @@ CONTAINS
                END DO
             END DO
             !
-            !== calculate horizontal gradient of vertical vorticity and average onto t-point ==!
+            !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
             DO jk = 1, jpkm1
-               DO jj = 2, jpj
-                  DO ji = 2, jpi
-                     zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1u(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                        &                     + ( r1_e1u(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                     zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2v(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                        &                     + ( r1_e2v(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+               DO jj = 2, jpjm1
+                  DO ji = 2, jpim1
+                     zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                        &                     + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                     zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                        &                     + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
                   END DO
                END DO
             END DO
@@ -800,11 +816,11 @@ CONTAINS
             IF( kt == kit000 ) THEN       !! compute stretching subroutine
                !
                IF(lwp) WRITE(numout,*) 'The first timestep is', kit000
-               IF(lwp) WRITE(numout,*) 'prd at (840,506,40) is', prd(840,506,40)
-               IF(lwp) WRITE(numout,*) 'pn2 at (840,506,40) is', pn2(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zwzdx at (840,506,40) is', zwzdx(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zwzdy at (840,506,40) is', zwzdy(840,506,40)
-               IF(lwp) WRITE(numout,*) 'nmlnqg at (840,506,40) is', nmlnqg(840,506)
+               IF(lwp) WRITE(numout,*) 'prd at (600,1100,22) is', prd(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'pn2 at (600,1100,22) is', pn2(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zwzdx at (600,1100,22) is', zwzdx(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zwzdy at (600,1100,22) is', zwzdy(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'nmlnqg at (600,1100,22) is', nmlnqg(840,506)
                !! Output some values for prd, pn2, zwzdx ... here 
                !
                zstlimx(:,:,:) = 0._wp
@@ -812,22 +828,22 @@ CONTAINS
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
                !
-               IF(lwp) WRITE(numout,*) 'zstlimx at (840,506,40) is', zstlimx(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zstlimy at (840,506,40) is', zstlimy(840,506,40)
+               IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
                !
-            ELSEIF( MOD(kt-1,48) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
+            ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
                !
                IF(lwp) WRITE(numout,*) 'The timestep is', kt
-               IF(lwp) WRITE(numout,*) 'prd at (840,506,40) is', prd(840,506,40)
-               IF(lwp) WRITE(numout,*) 'pn2 at (840,506,40) is', pn2(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zwzdx at (840,506,40) is', zwzdx(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zwzdy at (840,506,40) is', zwzdy(840,506,40)
-               IF(lwp) WRITE(numout,*) 'nmlnqg at (840,506,40) is', nmlnqg(840,506)
+               IF(lwp) WRITE(numout,*) 'prd at (600,1100,22) is', prd(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'pn2 at (600,1100,22) is', pn2(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zwzdx at (600,1100,22) is', zwzdx(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zwzdy at (600,1100,22) is', zwzdy(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'nmlnqg at (600,1100,22) is', nmlnqg(840,506)
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
                !
-               IF(lwp) WRITE(numout,*) 'zstlimx at (840,506,40) is', zstlimx(840,506,40)
-               IF(lwp) WRITE(numout,*) 'zstlimy at (840,506,40) is', zstlimy(840,506,40)
+               IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
+               IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
                !
             ENDIF
             !
@@ -1104,8 +1120,8 @@ CONTAINS
 			END DO
 		END DO
       !
-      IF(lwp) WRITE(numout,*) 'zstlimx at (840,506,40) is', zstlimx(840,506,40)
-      IF(lwp) WRITE(numout,*) 'zstlimy at (840,506,40) is', zstlimy(840,506,40)
+      IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
+      IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
       !
    END SUBROUTINE
 

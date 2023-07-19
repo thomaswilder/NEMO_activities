@@ -362,7 +362,23 @@ ORCA025 blows up with large velocities.
 Have written in daily stretching calculations.
 - Revision 16286
 
-Model appears to break at first timestep... 
+Model appears to break at first timestep...
+ASCII output not working... Lets check idealised configuration.
+	- Works for idealised... but `nmlnqg` is giving rubbish values. 
+
+`IDEAL` appears to be running fine with daily stretching calculations ... Model blew up with large velocities at i, j, k = 214, 4, 25
+- Computing at every timestep seems to keep the model stable
+
+Try quarter daily stretching calculations in `u-cx856`.
+
+
+### 19th July
+Examining the ORCA025 output shows process discontinuities in vorticity and divergence gradients. 
+- Compute these terms differently?
+- Are the scale factors incorrect? Shouldn't gradients in `ji` use `e1v`? and vice versa.
+
+In 2D Leith scheme only, have updated scale factors in vorticity, and added diagnostics. And in QG Leith scheme.
+
 
 
 ## Leith as GM

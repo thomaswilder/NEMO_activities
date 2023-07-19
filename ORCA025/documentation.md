@@ -301,4 +301,84 @@ Set model to run for three months with 5 daily output and monthly cycle...
 ### 5th July
 Model blew up after day 20 with large velocities. 
 
-Going to create a new IDEAL configuration at eddy permitting resolution and test QG Leith in that.
+Going to create a new IDEAL configuration at eddy permitting resolution and test QG Leith in that. It worked.
+
+Run `u-cx856` for 20 days with daily output using daily cycle and resubmission. 
+- Check if restart file for second day comes from first day in NEMOhist directory. Yep.
+
+Why does the model blow up with monthly output in a monthly cycle, but not when using daily output and daily cycles?
+
+Some details:
+- Monthly cycle/output run blows up at timestep 968, and has |U| = 16.02 at i, j, k -> 1111, 845, 28 and MPI rank 241.
+- Examining `output.abort_0241.nc` file shows the model blows up west of the Gibraltor strait. See Jupyter notebooks for figures.
+
+Trying 2D Leith with a monthly cycle/output, running for 4 months. Ran without errors. 
+
+### 6th July
+Tempted to set a 2D Leith rose suite running for 20 years, using 6 month output and yearly cycles. This will form the basis of the first set of data for analysis. 
+
+What diagnostics do we need? Probably chat with Till about this.
+
+Using now density and buoyancy frequency squared instead of before has led to QG Leith running for one month on monthly cycle without error.
+
+Now, pickup and continue for 3 more months.
+- Replace NEMO restart file directory `$HOME/nemo_restarts/cx856o_19760201_restart.nc` with `$NEMO_START` in `u-cx856`. 
+- Perhaps need to use `rose suite-restart`?
+
+Anyway, starting from spun up 19760201, and running QG Leith for 12 months. Litmus test!
+
+
+### 10th July
+QG Leith ran for ~ 118 days before blowing up at grid point i, j, k = 302, 1204, 23. This is just off the Antarctic peninsula. See `ocean.abort_0326` in JASMIN gws.
+
+Whilst computing QG Leith at every timestep is costly, it might be worth running a simulation with the previous implementation to check if NEMO requires timestep calculations for stability.
+
+Revision 16279 in NEMO MO branch.
+
+**huge E-R-R-O-R** : 
+Even with now temp and sal, model blows up at i, j, k = 1188, 850, 25
+
+
+### 11th July
+What about starting QG Leith from rest?
+- Try this in `u-cr756`
+	- Forgot to change `rn_efr` back to 0.05 in TKE scheme! Change this.
+
+
+### 13th July
+Briefly...
+
+- The computation of the stretching term takes place on the first timestep, and remains the same on the following timestep.
+- On the first timestep, viscosity field already has the weird discontinuity off the coast of South America.
+- In both 2D and QG Leith, transect north south from SA shows wave like features, possibly in divergence or vorticity. If divergence, could be vertical motions. 
+- Picture at coastline is similar between 2D and QG cases, with extremely large strips in the vertical.
+
+Check divergence field!! 
+
+
+### 18th July
+Running 2D Leith again and outputting vorticity gradients. These will be same as QG Leith at first timestep. Trying to find out why the viscosity output looks like it has a discontinuity in it?
+
+The discontinuities are appearing in the vorticity gradient `zwzdy`, which appears in several places. See 2D Leith in Jupyter.
+- These are also present in `hdivdy`
+
+And implies an error in computing gradients in vorticity and divergence.
+
+
+### 19th July
+No indication of process discontinuity present in buoyancy gradient field, or stretching field.
+
+Checking the vorticity and divergence fields for process feature...
+
+New GOSI9p8.0 revision `16289`
+
+Zooming out of vorticity gradient `zwzdy` and we see these process features next to land masses. Not clear whether they exist in `zwzdx`?
+- The process type regions could be masked arrays as they are located near boundaries, and thus are plotted more than once in python. 
+
+If the error did lie in the vorticity gradient, then this is fed through into the stretching term and may impact the stability.
+- Modify vorticity gradient in QG Leith scheme and test for one month.
+
+New GOSI9p8.0 revision is `16290`.
+
+Still blowing up with QG Leith. Trying with stretching computed every timestep...
+- revision `16291`
