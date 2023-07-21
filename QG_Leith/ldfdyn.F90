@@ -898,7 +898,8 @@ CONTAINS
                      ahmt_qg(ji,jj,jk) = dwzmagsq(ji,jj,jk)
                      ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) )
-                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
+                     !== Set max value on viscosity coefficient ==!
+                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), 250._wp )
                   END DO
                END DO
             END DO
@@ -910,7 +911,8 @@ CONTAINS
                   DO ji = 1, fs_jpim1 ! vector opt.
                      zsqqg = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
+                     !== Set max value on viscosity coefficient ==!
+                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), 250._wp )
                   END DO
                END DO
             END DO
