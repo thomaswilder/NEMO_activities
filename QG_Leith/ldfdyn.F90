@@ -814,36 +814,36 @@ CONTAINS
             !
             !== Compute stretching term at first time step index and then at daily intervals ==!
             IF( kt == kit000 ) THEN       !! compute stretching subroutine
-               !
-               IF(lwp) WRITE(numout,*) 'The first timestep is', kit000
-               IF(lwp) WRITE(numout,*) 'prd at (600,1100,22) is', prd(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'pn2 at (600,1100,22) is', pn2(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zwzdx at (600,1100,22) is', zwzdx(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zwzdy at (600,1100,22) is', zwzdy(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'nmlnqg at (600,1100,22) is', nmlnqg(840,506)
+!               !
+!               IF(lwp) WRITE(numout,*) 'The first timestep is', kit000
+!               IF(lwp) WRITE(numout,*) 'prd at (100,100,20) is', prd(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'pn2 at (100,100,20) is', pn2(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zwzdx at (100,100,20) is', zwzdx(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zwzdy at (100,100,20) is', zwzdy(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'nmlnqg at (100,100) is', nmlnqg(100,100)
                !! Output some values for prd, pn2, zwzdx ... here 
                !
                zstlimx(:,:,:) = 0._wp
                zstlimy(:,:,:) = 0._wp
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-               !
-               IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
+!               !
+!               IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
                !
             ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
-               !
-               IF(lwp) WRITE(numout,*) 'The timestep is', kt
-               IF(lwp) WRITE(numout,*) 'prd at (600,1100,22) is', prd(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'pn2 at (600,1100,22) is', pn2(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zwzdx at (600,1100,22) is', zwzdx(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zwzdy at (600,1100,22) is', zwzdy(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'nmlnqg at (600,1100,22) is', nmlnqg(840,506)
+!               !
+!               IF(lwp) WRITE(numout,*) 'The timestep is', kt
+!               IF(lwp) WRITE(numout,*) 'prd at (100,100,20) is', prd(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'pn2 at (100,100,20) is', pn2(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zwzdx at (100,100,20) is', zwzdx(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zwzdy at (100,100,20) is', zwzdy(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'nmlnqg at (100,100,20) is', nmlnqg(100,100)
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-               !
-               IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
-               IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
+!               !
+!               IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
+!               IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
                !
             ENDIF
             !
@@ -883,8 +883,13 @@ CONTAINS
                DO jj = 1, jpj
                   DO ji = 1, jpi
                      zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
+!!                     IF(lwp) WRITE(numout,*) 'zztmpx at', ji, jj, jk, 'is', zztmpx
                      zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
+!!                     IF(lwp) WRITE(numout,*) 'zztmpy at', ji, jj, jk, 'is', zztmpy
                      dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+!!                     IF(lwp) WRITE(numout,*) 'dwzmagsq at', ji, jj, jk, 'is', dwzmagsq(ji,jj,jk)
+!!                     zztmp = (zztmpx**2) + (zztmpy**2)
+!!                     IF(lwp) WRITE(numout,*) '(zztmpx**2) + (zztmpy**2) at', ji, jj, jk, 'is', zztmp
                   END DO
                END DO
             END DO
@@ -1121,11 +1126,11 @@ CONTAINS
 				END DO
 			END DO
 		END DO
+!      !
+!      IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
+!      IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
       !
-      IF(lwp) WRITE(numout,*) 'zstlimx at (600,1100,22) is', zstlimx(600,1100,22)
-      IF(lwp) WRITE(numout,*) 'zstlimy at (600,1100,22) is', zstlimy(600,1100,22)
-      !
-   END SUBROUTINE
+   END SUBROUTINE ldf_dyn_str
 
    !!======================================================================
 END MODULE ldfdyn
