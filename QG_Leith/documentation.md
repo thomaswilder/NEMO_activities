@@ -380,6 +380,29 @@ Examining the ORCA025 output shows process discontinuities in vorticity and dive
 In 2D Leith scheme only, have updated scale factors in vorticity, and added diagnostics. And in QG Leith scheme.
 
 
+### 31st July
+Failed to include name of subroutine at end of stretching calculation e.g. 
+`END SUBROUTINE ldf_dyn_str`
+
+
+### 1st August
+Adding in print statements like,
+`print *,  ‘dwzmagsq at’, ji, jj, jk, ‘is’, dwzmagsq(ji,jj,jk)`
+which print to `testing.output`.
+
+Print out only when `jk==22` to avoid large ascii output.
+
+Messed up reading in of `zstlim` and the values do indeed match up with the print statements.
+
+
+### 17th August
+Possible cause for model blowing up may be due to use of `now` timestep variables. 
+- Changing to use of before, means modifying `ldfdyn.f90` and `step.f90`. Doing this only in QG Leith routine to start.
+
+
 
 ## Leith as GM
 In NEMO, GM coefficients are computed in `OCE/LDF/ldftra.f90`.
+
+
+

@@ -481,8 +481,8 @@ CONTAINS
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt                                             ! time step index
       INTEGER, INTENT(in) ::   kit000                                         ! first time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! now in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! before in situ density
+      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! before Brunt-Vaisala frequency
       REAL(wp)                               ::   zrho3   = 0.03_wp           ! density     criterion for mixed layer depth
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
@@ -758,7 +758,7 @@ CONTAINS
             DO jj = 1, jpj
                DO ji = 1, jpi
                   nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
-                  zztmp = gdepw_n(ji,jj,mbkt(ji,jj)+1)
+                  zztmp = gdepw_b(ji,jj,mbkt(ji,jj)+1)
                   zrho10_3(ji,jj) = zztmp
                END DO
             END DO 
@@ -770,7 +770,7 @@ CONTAINS
                DO jj = 1, jpj
                   DO ji = 1, jpi
                      ikt = mbkt(ji,jj)
-                     zzdep = gdepw_n(ji,jj,jk) * tmask(ji,jj,1)
+                     zzdep = gdepw_b(ji,jj,jk) * tmask(ji,jj,1)
                      zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
                      IF( zztmp > zrho3 ) THEN
                         zrho10_3(ji,jj) = zzdep                              ! > 0.03
@@ -792,8 +792,8 @@ CONTAINS
             DO jk = 1, jpkm1                                 ! Horizontal slab
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1   ! vector opt.
-                     zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
-                        &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+                     zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+                        &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
                   END DO
                END DO
             END DO
@@ -814,47 +814,26 @@ CONTAINS
             !
             !== Compute stretching term at first time step index and then at daily intervals ==!
             IF( kt == kit000 ) THEN       !! compute stretching subroutine
-!               !
-!               IF(lwp) WRITE(numout,*) 'The first timestep is', kit000
-!               IF(lwp) WRITE(numout,*) 'prd at (100,100,20) is', prd(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'pn2 at (100,100,20) is', pn2(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zwzdx at (100,100,20) is', zwzdx(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zwzdy at (100,100,20) is', zwzdy(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'nmlnqg at (100,100) is', nmlnqg(100,100)
-               !! Output some values for prd, pn2, zwzdx ... here 
                !
                zstlimx(:,:,:) = 0._wp
                zstlimy(:,:,:) = 0._wp
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-!               !
-!               IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
                !
             ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
-!               !
-!               IF(lwp) WRITE(numout,*) 'The timestep is', kt
-!               IF(lwp) WRITE(numout,*) 'prd at (100,100,20) is', prd(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'pn2 at (100,100,20) is', pn2(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zwzdx at (100,100,20) is', zwzdx(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zwzdy at (100,100,20) is', zwzdy(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'nmlnqg at (100,100,20) is', nmlnqg(100,100)
                !
                CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-!               !
-!               IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
-!               IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
                !
             ENDIF
             !
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)      &
-                        &                 - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
-                        &                 + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
-                        &                 - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
-                        &                 * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
+                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+                        &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+                        &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+                        &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+                        &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
                   END DO  
                END DO  
             END DO
@@ -883,13 +862,8 @@ CONTAINS
                DO jj = 1, jpj
                   DO ji = 1, jpi
                      zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
-!!                     IF(lwp) WRITE(numout,*) 'zztmpx at', ji, jj, jk, 'is', zztmpx
                      zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
-!!                     IF(lwp) WRITE(numout,*) 'zztmpy at', ji, jj, jk, 'is', zztmpy
                      dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-!!                     IF(lwp) WRITE(numout,*) 'dwzmagsq at', ji, jj, jk, 'is', dwzmagsq(ji,jj,jk)
-!!                     zztmp = (zztmpx**2) + (zztmpy**2)
-!!                     IF(lwp) WRITE(numout,*) '(zztmpx**2) + (zztmpy**2) at', ji, jj, jk, 'is', zztmp
                   END DO
                END DO
             END DO
@@ -903,21 +877,25 @@ CONTAINS
                      ahmt_qg(ji,jj,jk) = dwzmagsq(ji,jj,jk)
                      ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) )
+                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
                      !== Set max value on viscosity coefficient ==!
-                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), 250._wp )
+!                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), 250._wp )
                   END DO
                END DO
             END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
             !
+            IF(lwp) WRITE(numout,*) 'dwzmagsq(151,627,73) is', ahmt_qg(151,627,73)
+            !
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1 ! vector opt.
                      zsqqg = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-                     !== Set max value on viscosity coefficient ==!
-                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), 250._wp )
+                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
+!                     !== Set max value on viscosity coefficient ==!
+!                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), 250._wp )
                   END DO
                END DO
             END DO
@@ -988,8 +966,8 @@ CONTAINS
       !! ** action  :   zstlimx, zstlimy updated daily
       !!----------------------------------------------------------------------
       INTEGER,  INTENT(in) ::   kt   ! time step index
-      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   prd                         ! now in situ density
-      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   pn2                         ! now Brunt-Vaisala frequency
+      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   prd                         ! before in situ density
+      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   pn2                         ! before Brunt-Vaisala frequency
       REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   zwzdx                       ! Horizontal vorticity gradient in x-direction
       REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   zwzdy                       ! Horizontal vorticity gradient in y-direction
       INTEGER,  INTENT(in),  DIMENSION(:,:)   ::   nmlnqg                      ! Level of mixed layer depth
@@ -1056,11 +1034,11 @@ CONTAINS
                   !== vertical gradient of x component ==!
                   zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
                   zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-                  zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                  zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
                   !== vertical gradient of y component ==!
                   zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
                   zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-                  zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_n(ji,jj,jk) ) * tmask(ji,jj,jk)
+                  zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
                ENDIF
             END DO
          END DO
@@ -1072,8 +1050,8 @@ CONTAINS
 			DO jj = 2, jpj
 				DO ji = 2, jpi
 				   !== grid scale velocity squared ==!
-				   zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
-				   zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
+				   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) )
+				   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) )
 				   zusq =  zztmpx**2 + zztmpy**2
 				   !== square of Rossby number U^2/(f^2 * A) ==!
 				   rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
@@ -1086,7 +1064,7 @@ CONTAINS
 				      znsq = pn2(ji,jj,jk)
 				   ENDIF
 				   !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-				   rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_n(ji,jj,jk)**2 ) /    &
+				   rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
 				      &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
 				   !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
 				   rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)

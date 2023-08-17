@@ -382,3 +382,105 @@ New GOSI9p8.0 revision is `16290`.
 
 Still blowing up with QG Leith. Trying with stretching computed every timestep...
 - revision `16291`
+
+
+### 20th July
+QG Leith set to run for 6 months with revision `16291`.
+- So far surpassed previous max run time of 118 days and is still going ... 124 days... 145 days...
+
+Ran without error for 6 months.
+- Trouble figuring out how to pickup for another 6 months...
+
+Running for 12 months from 19760201 restart and using postproc and housekeping too. 
+- Errors on pickup, mismatch between restart files... but why?
+
+Going to run for 2 years without postproc and housekeeping, so keeping files locally on Monsoon2.
+
+
+### 21st July
+Blew up on timestep 28325 (day 590), with larger velocities in MPI process 122 and 123.
+
+Viscosity field at 19770801 looks fine in most areas, though patches of starry night like viscosity does show, similar to what we saw in the idealised case.
+
+Would be interesting to see how far the simulation runs from rest (`u-cr756`).
+- Blew up at timestep 344 with large velocities.
+
+Add in max visc value and run `u-cx856`... revision `16292`
+
+
+### 24th July
+Simulation with viscosity coefficient limited to 250 m^2^/s...
+
+Error when trying to restart `u-cx856`,
+```
+[WARN] The NEMO restart data does not match the  current cycle time
+.   Cycle time is 19770501
+   NEMO restart time is 19770601
+[WARN] Automatically removing NEMO dumps ahead of the current cycletime, and pick up the dump at this time
+[FAIL] si3_controller: Mismatch in SI3 restart file date 19770601 and NEMO restart file date 19770501
+[FAIL] run_model # return-code=188
+2023-07-24T08:11:19Z CRITICAL - failed/EXIT
+```
+Deleted the 197706 restart files from `NEMOhist`, now running!
+
+Similar starry night features. Viscosity field looks good so far.
+
+`u-cx856` still running at 197711... suggesting that large viscosity values could be the reason the model blows up.
+
+#### Parallel  runs
+Running parallel runs of 2D Leith (`u-cy517`) and Biharm (`u-cy516`):
+	- 7 years,
+	- monthly diagnostics with monthly cycles,
+
+
+### 25th July
+- 2D Leith and Biharm runs are ongoing. 
+- QG Leith in `u-cx856` completed, so large viscosities may be causing the model to blow up.
+
+#### Analysing first two timesteps of 2D and QG Leith
+Files on JASMIN in `/gws/.../u-cx856`
+- At depth level `jk=11`, QG Leith has max viscosity up to 6000 m^2^/s, and 2D Leith up to 3500 m^2^/s.
+- At depth level `jk=31`, QG has 12000 m^2^/s, and 2D just over 2000 m^2^/s.
+- At depth level `jk=73`, QG has 60000 m^2^/s, and 2D just over 300 m^2^/s
+
+**2D Leith (`u-cy517`) now on 197901**
+
+Why is the QG Leith coming out at 60000 m^2^/s? Can't seem to diagnose this. Output `ahmt_qg` diagnostic too.
+
+
+### 26th July
+
+When computing `zztmpx*zztmpx+zztmpy*zztmpy` using timestep output, it is not the same as `ahmt_qg`, even though it should be.
+- Going to output these values in idealised model to check this.
+
+
+### 31st July
+Halfing the timestep to 15 minutes... still large viscosity values.
+- Largest value at timestep 1 has 63124 m^2^/s at index i, j, k = 627, 151, 73. n.b. python uses k, j, i as indexi order. 
+- This is in the same index position as the original ORCA025 with 48 timesteps (30 mins).
+
+The fact that the viscosity value is large at the first timestep suggests that this feature is already present in ORCA025, and is not a result of the QG Leith routine.
+
+But the diagnostics are consistent at the surface, where `zstlim=0.0`.
+- The max viscosity term is at i, j, k = 1271, 553, 0, and is 4026 m^2^/s.
+
+New revision is `16299`.
+- removed max viscous coefficient, added in print statements.
+
+
+### 1st August
+Considering the stability criterion for model timestep and viscous coefficient,
+$\Delta_t < \frac{\Delta^2_{min}}{8 A_{qg}}$.
+When using a timestep of 1800 s, we find that the max value $A_{qg}$ can take is about 40,000 m^2^/s. Reducing the timestep to 900 s takes $A_{qg}$ to around 80,000 m^2^/s. This is greater than the current max viscous value of 60,000 m^2^/s.
+
+To this end, we're running `u-cx856` for 3 years, with monthly cycles and monthly output.
+
+
+### 17th August
+Reducing the timestep did not work.
+
+But perhaps something to try is to set the max viscous value to satisfy the stability criterion above? This is numerically plausible, and not arbitrary.
+
+#### 2D Leith run at year 7
+- Has a maximum value of 2746 m^2^/s at the surface around the Agulhas region. 
+- Comparing regions of large values with Pearson et al. (2017) appears consistent.
