@@ -490,7 +490,7 @@ CONTAINS
       REAL(wp) ::   zu2pv2_ij_p1, zu2pv2_ij, zu2pv2_ij_m1, zemax   ! local scalar (option 31)
       REAL(wp) ::   zcmsmag, zstabf_lo, zstabf_up, zdelta, zdb     ! local scalar (option 32)
       REAL(wp) ::   zcm2dl, zsq2d , zztmpx, zztmpy                 ! local scalar (option 33)
-      REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep, zu                ! local scalar (option 34)
+      REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep, zu, ahm_max       ! local scalar (option 34)
       !!----------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('ldf_dyn')
@@ -869,6 +869,9 @@ CONTAINS
             END DO
             !
             !== calculate viscosity coefficient ==!
+            !== stabilit criteria for QG Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+            ahm_max = (7000.0_wp**2)/(8.0_wp*1800.0_wp) ! needs updating to be model aware
+            !
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
@@ -877,9 +880,9 @@ CONTAINS
                      ahmt_qg(ji,jj,jk) = dwzmagsq(ji,jj,jk)
                      ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) )
-                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
+!                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
                      !== Set max value on viscosity coefficient ==!
-!                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), 250._wp )
+                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahm_max )
                   END DO
                END DO
             END DO
@@ -893,9 +896,9 @@ CONTAINS
                   DO ji = 1, fs_jpim1 ! vector opt.
                      zsqqg = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
-!                     !== Set max value on viscosity coefficient ==!
-!                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), 250._wp )
+!                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
+                     !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
+                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahm_max )
                   END DO
                END DO
             END DO

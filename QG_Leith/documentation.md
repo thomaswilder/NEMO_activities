@@ -399,6 +399,17 @@ Messed up reading in of `zstlim` and the values do indeed match up with the prin
 Possible cause for model blowing up may be due to use of `now` timestep variables. 
 - Changing to use of before, means modifying `ldfdyn.f90` and `step.f90`. Doing this only in QG Leith routine to start.
 
+New NEMO revision is 16324.
+
+
+### 23rd August
+ORCA025 crashed with before. But this seems the most consistent.
+
+Adding in the stability criterion for QG Leith:
+- Am = deltamin^2 / (8 deltaT).
+- min horizontal resolution in orca025 is 7 km https://archimer.ifremer.fr/doc/2006/publication-3514.pdf
+- Using normal timestep and this resolution gives a max viscous coefficient of 3000 m^2^/s, significantly lower than values being initially calculated.
+
 
 
 ## Leith as GM
