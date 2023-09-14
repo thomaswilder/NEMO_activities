@@ -644,8 +644,8 @@ CONTAINS
             DO jk = 1, jpkm1                                 ! Horizontal slab
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1   ! vector opt.
-                     zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vn(ji+1,jj  ,jk) - e2v(ji,jj) * vn(ji,jj,jk)            &
-                        &          - e1u(ji  ,jj+1) * un(ji  ,jj+1,jk) + e1u(ji,jj) * un(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+                     zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+                        &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
                   END DO
                END DO
             END DO
@@ -670,11 +670,11 @@ CONTAINS
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_n(ji  ,jj,jk) * un(ji  ,jj,jk)      &
-                        &                 - e2u(ji-1,jj) * e3u_n(ji-1,jj,jk) * un(ji-1,jj,jk)      &
-                        &                 + e1v(ji,jj  ) * e3v_n(ji,jj  ,jk) * vn(ji,jj  ,jk)      &
-                        &                 - e1v(ji,jj-1) * e3v_n(ji,jj-1,jk) * vn(ji,jj-1,jk)  )   &
-                        &                 * r1_e1e2t(ji,jj) / e3t_n(ji,jj,jk)
+                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+                        &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+                        &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+                        &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+                        &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
                   END DO  
                END DO  
             END DO
@@ -698,12 +698,15 @@ CONTAINS
             !
             CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
             !
+            !== stabilit criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+            ahm_max = (7000.0_wp**2)/(8.0_wp*1800.0_wp) ! needs updating to be model aware
+            !
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
                      zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) ) + dwzmagsq(ji,jj,jk)
-                     ahmt(ji,jj,jk) = SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d )
+                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahm_max )
                   END DO
                END DO
             END DO
@@ -713,7 +716,7 @@ CONTAINS
                   DO ji = 1, fs_jpim1 ! vector opt.
                      zsq2d = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-                     ahmf(ji,jj,jk) = SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d )
+                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahm_max )
                   END DO
                END DO
             END DO
@@ -869,7 +872,7 @@ CONTAINS
             END DO
             !
             !== calculate viscosity coefficient ==!
-            !== stabilit criteria for QG Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+            !== stabilit criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
             ahm_max = (7000.0_wp**2)/(8.0_wp*1800.0_wp) ! needs updating to be model aware
             !
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
