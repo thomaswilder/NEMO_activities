@@ -375,7 +375,7 @@ CONTAINS
                END DO
             END DO
             !
-            !== initialise key variables with zeros ==!
+            !== initialise key variables with zeros (probably don't need to do this??) ==!
             dwzmagsq(:,:,:) = 0._wp
             ddivmagsq(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
@@ -458,7 +458,7 @@ CONTAINS
    END SUBROUTINE ldf_dyn_init
 
 
-   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2 )
+   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2, ahmt )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_dyn  ***
       !! 
