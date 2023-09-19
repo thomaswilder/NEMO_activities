@@ -2,7 +2,7 @@
 
 This documents the development: 
 1) QG leith viscosity parameterisation,
-2) Using Leith coefficients in the Gent-McWilliams scheme,
+2) Using Leith coefficients in the Gent-McWilliams and Redi scheme,
 
 The QG Leith viscosity implementation makes use of MITgcm implementation and work by Bachman et al. (2017) and Pearson et al. (2017).
 
@@ -412,8 +412,19 @@ Adding in the stability criterion for QG Leith:
 
 
 
-## Leith as GM
-In NEMO, GM coefficients are computed in `OCE/LDF/ldftra.f90`.
+## Leith as GM and Redi
+
+### 19th September
+- In NEMO, GM coefficients are computed in `OCE/LDF/ldftra.f90`.
+- There are two coefficient specified, one on each of u- and v- points.
+- This can be achieved by averaging `ahmt` onto each point.
+
+- Might need to re-order the calling of `ldfdyn.f90` in `step.f90`, so viscosity coefficient is called first then can be read into `ldftra.f90`.
+
+To incorporate QG Leith, the easiest way may be to add IF conditions into `ldftra` to choose QG Leith when a namelist set TRUE in section `namtra_eiv`?
+
+
+
 
 
 
