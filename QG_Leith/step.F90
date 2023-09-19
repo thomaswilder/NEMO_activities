@@ -149,12 +149,12 @@ CONTAINS
                          CALL ldf_slp     ( kstp, rhd, rn2b )             ! before slope for standard operator
          ENDIF
       ENDIF
-      !                                                                   ! eddy diffusivity coeff.
-      IF( l_ldftra_time .OR. l_ldfeiv_time )   CALL ldf_tra( kstp )       !       and/or eiv coeff.
-      IF( l_ldfdyn_time                    ) THEN
-      														 CALL eos( tsb, rhd, gdept_0(:,:,:) )   ! before in-situ density for QG Leith
-      														 CALL ldf_dyn( kstp, nit000, rhd , rn2b )       ! eddy viscosity coeff. 
+      IF( l_ldfdyn_time ) THEN
+         CALL eos( tsb, rhd, gdept_0(:,:,:) )                 ! before in-situ density for QG Leith
+      	CALL ldf_dyn( kstp, nit000, rhd , rn2b, ahmt )       ! eddy viscosity coeff. 
     	ENDIF
+      !                                                                         ! eddy diffusivity coeff.
+      IF( l_ldftra_time .OR. l_ldfeiv_time )   CALL ldf_tra( kstp, ahmt )       !       and/or eiv coeff.
       !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       !  Ocean dynamics : hdiv, ssh, e3, u, v, w
       !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
