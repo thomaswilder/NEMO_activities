@@ -23,6 +23,7 @@ MODULE ldftra
    USE phycst          ! physical constants
    USE ldfslp          ! lateral diffusion: slope of iso-neutral surfaces
    USE ldfc1d_c2d      ! lateral diffusion: 1D & 2D cases 
+   USE ldfdyn          ! Leith schemes as diffusivity coefficient
    USE diaptr
    !
    USE in_out_manager  ! I/O manager
@@ -124,6 +125,8 @@ CONTAINS
       !!                  = 30    = F(i,j,k)   = 2D (case 20) + decrease with depth (case 10)
       !!                  = 31    = F(i,j,k,t) = F(local velocity) (  1/2  |u|e     laplacian operator
       !!                                                           or 1/12 |u|e^3 bilaplacian operator )
+      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!              * initialisation of the eddy induced velocity coefficient by a call to ldf_eiv_init 
       !!            
       !! ** action  : ahtu, ahtv initialized one for all or l_ldftra_time set to true
@@ -363,6 +366,18 @@ CONTAINS
             !
             l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
             !
+         CASE(  33  )      !==  time varying 3D field  ==!
+            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
+            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
+            !
+            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
+            !
+         CASE(  34  )       !==  time varying 3D field  ==!
+            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
+            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
+            !
+            l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
+            !
          CASE DEFAULT
             CALL ctl_stop('ldf_tra_init: wrong choice for nn_aht_ijk_t, the type of space-time variation of aht')
          END SELECT
@@ -382,7 +397,7 @@ CONTAINS
    END SUBROUTINE ldf_tra_init
 
 
-   SUBROUTINE ldf_tra( kt )
+   SUBROUTINE ldf_tra( kt, ahmt )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_tra  ***
       !! 
@@ -396,6 +411,10 @@ CONTAINS
       !!
       !!                 = 31    ahtu, ahtv = F(i,j,k,t) = F(local velocity) (  |u|e  /12   laplacian operator
       !!                                                                     or |u|e^3/12 bilaplacian operator )
+      !!
+      !!                 = 33    ahtu, ahtv = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+      !!
+      !!                 = 34    ahtu, ahtv = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!
       !!              * time varying EIV coefficients: call to ldf_eiv routine
       !!
