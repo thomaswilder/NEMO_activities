@@ -149,6 +149,7 @@ CONTAINS
                          CALL ldf_slp     ( kstp, rhd, rn2b )             ! before slope for standard operator
          ENDIF
       ENDIF
+      !
       IF( l_ldfdyn_time ) THEN
          CALL eos( tsb, rhd, gdept_0(:,:,:) )           ! before in-situ density for QG Leith
       	CALL ldf_dyn( kstp, nit000, rhd , rn2b )       ! eddy viscosity coeff. 
