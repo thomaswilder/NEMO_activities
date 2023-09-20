@@ -456,7 +456,7 @@ CONTAINS
    END SUBROUTINE ldf_dyn_init
 
 
-   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2 )
+   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2, ahm_leith )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_dyn  ***
       !! 
@@ -479,9 +479,10 @@ CONTAINS
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt                                             ! time step index
       INTEGER, INTENT(in) ::   kit000                                         ! first time step index
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   prd                         ! before in situ density
-      REAL(wp), INTENT(in), DIMENSION(:,:,:) ::   pn2                         ! before Brunt-Vaisala frequency
-      REAL(wp)                               ::   zrho3   = 0.03_wp           ! density     criterion for mixed layer depth
+      REAL(wp), INTENT(in),    DIMENSION(:,:,:) ::   prd                      ! before in situ density
+      REAL(wp), INTENT(in),    DIMENSION(:,:,:) ::   pn2                      ! before Brunt-Vaisala frequency
+      REAL(wp), INTENT(inout), DIMENSION(:,:,:) ::   ahm_leith                ! ahmt for use in ldftra
+      REAL(wp)                                  ::   zrho3   = 0.03_wp        ! density     criterion for mixed layer depth
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       INTEGER  ::   ikt          ! local integer (option 34)
@@ -740,6 +741,9 @@ CONTAINS
          !
          CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
          !
+         !== assigning for output and use in step.f90 ==!
+         ahm_leith(:,:,:) = ahmt(:,:,:)
+         !
          !== 2D Leith diagnostics ==!
          CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
          CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
@@ -925,6 +929,9 @@ CONTAINS
          END DO
          !
          CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+         !
+         !== assigning for output and use in step.f90 ==!
+         ahm_leith(:,:,:) = ahmt(:,:,:)
          !
          !== QG Leith diagnostics ==!
          CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point

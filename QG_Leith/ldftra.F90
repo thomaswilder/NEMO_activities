@@ -23,7 +23,7 @@ MODULE ldftra
    USE phycst          ! physical constants
    USE ldfslp          ! lateral diffusion: slope of iso-neutral surfaces
    USE ldfc1d_c2d      ! lateral diffusion: 1D & 2D cases 
-   USE ldfdyn          ! Leith schemes as diffusivity coefficient
+!!   USE ldfdyn          ! Leith schemes as diffusivity coefficient ... creates conflicts
    USE diaptr
    !
    USE in_out_manager  ! I/O manager
@@ -74,12 +74,11 @@ MODULE ldftra
    REAL(wp), PUBLIC ::      rn_Le               !: lateral diffusive length    [m]
    
    !                                  ! Flag to control the type of lateral diffusive operator
-!!   INTEGER, PARAMETER, PUBLIC ::   np_ERROR  =-10   ! error in specification of lateral diffusion
-!!   INTEGER, PARAMETER, PUBLIC ::   np_no_ldf = 00   ! without operator (i.e. no lateral diffusive trend)
+   INTEGER, PARAMETER, PUBLIC ::   np_ERROR  =-10   ! error in specification of lateral diffusion
+   INTEGER, PARAMETER, PUBLIC ::   np_no_ldf = 00   ! without operator (i.e. no lateral diffusive trend)
    !                          !!      laplacian     !    bilaplacian    !
-!!   INTEGER, PARAMETER, PUBLIC ::   np_lap    = 10   ,   np_blp    = 20  ! iso-level operator
-!!   INTEGER, PARAMETER, PUBLIC ::   np_lap_i  = 11   ,   np_blp_i  = 21  ! standard iso-neutral or geopotential operator
-   INTEGER, PARAMETER, PUBLIC ::   np_blp_i  = 21                       ! standard iso-neutral or geopotential operator
+   INTEGER, PARAMETER, PUBLIC ::   np_lap    = 10   ,   np_blp    = 20  ! iso-level operator
+   INTEGER, PARAMETER, PUBLIC ::   np_lap_i  = 11   ,   np_blp_i  = 21  ! standard iso-neutral or geopotential operator
    INTEGER, PARAMETER, PUBLIC ::   np_lap_it = 12   ,   np_blp_it = 22  ! triad    iso-neutral or geopotential operator
 
    INTEGER , PUBLIC ::   nldf_tra      = 0         !: type of lateral diffusion used defined from ln_traldf_... (namlist logicals)
@@ -377,7 +376,7 @@ CONTAINS
             IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
             IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
             !
-            l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
+            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
             !
          CASE DEFAULT
             CALL ctl_stop('ldf_tra_init: wrong choice for nn_aht_ijk_t, the type of space-time variation of aht')
@@ -398,7 +397,7 @@ CONTAINS
    END SUBROUTINE ldf_tra_init
 
 
-   SUBROUTINE ldf_tra( kt )
+   SUBROUTINE ldf_tra( kt, ahm_leith )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_tra  ***
       !! 
@@ -423,7 +422,8 @@ CONTAINS
       !!                aeiu, aeiv      -       -     -    -   (if ln_ldfeiv=T) 
       !!                aht/aei = ahm                          (if ln_ldfeiv=T and nn_aht/nn_aei = 33/34) 
       !!----------------------------------------------------------------------
-      INTEGER, INTENT(in) ::   kt   ! time step
+      INTEGER,  INTENT(in) ::   kt   ! time step
+      REAL(wp), INTENT(inout), DIMENSION(:,:,:) ::   ahm_leith                ! ahmt for use in ldftra
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       REAL(wp) ::   zaht, zahf, zaht_min, zDaht, z1_f20   ! local scalar
@@ -483,8 +483,8 @@ CONTAINS
          DO jk = 1, jpkm1
             DO jj = 1, jpjm1
                DO ji = 1, jpim1
-                  ahtu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-                  ahtv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+                  ahtu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+                  ahtv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
                END DO
             END DO
          END DO
@@ -499,8 +499,8 @@ CONTAINS
          DO jk = 1, jpkm1
             DO jj = 1, jpjm1
                DO ji = 1, jpim1
-                  aeiu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-                  aeiv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+                  aeiu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+                  aeiv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
                END DO
             END DO
          END DO
