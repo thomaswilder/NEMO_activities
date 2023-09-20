@@ -86,7 +86,6 @@ MODULE ldfdyn
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   mld_qg       !: QG Leith mixed layer depth
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   zrho10_3     !: mixed layer depth
    INTEGER,          ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   nmlnqg       !: number of levels in mixed layer
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ahmt_qg, ahmt_div   !: PV and Div contributions to QG Leith T-points [m2/s]
@@ -400,7 +399,7 @@ CONTAINS
                &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,  rre(jpi,jpj,jpk) ,                                     &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
-               &  tmpzstx(jpi,jpj,jpk) , mld_qg(jpi,jpj) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                &
+               &  tmpzstx(jpi,jpj,jpk) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                                  &
                &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , ahmt_qg(jpi,jpj,jpk) , ahmt_div(jpi,jpj,jpk) ,      &
                &  STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate QG Leith arrays')
@@ -437,7 +436,6 @@ CONTAINS
             tmpzstx(:,:,:) = 0._wp
             ahmt_qg(:,:,:) = 0._wp
             ahmt_div(:,:,:) = 0._wp
-            mld_qg(:,:) = 0._wp
             !
          CASE DEFAULT
             CALL ctl_stop('ldf_dyn_init: wrong choice for nn_ahm_ijk_t, the type of space-time variation of ahm')
@@ -458,7 +456,7 @@ CONTAINS
    END SUBROUTINE ldf_dyn_init
 
 
-   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2, ahmt )
+   SUBROUTINE ldf_dyn( kt, kit000, prd, pn2 )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_dyn  ***
       !! 
@@ -489,8 +487,9 @@ CONTAINS
       INTEGER  ::   ikt          ! local integer (option 34)
       REAL(wp) ::   zu2pv2_ij_p1, zu2pv2_ij, zu2pv2_ij_m1, zemax   ! local scalar (option 31)
       REAL(wp) ::   zcmsmag, zstabf_lo, zstabf_up, zdelta, zdb     ! local scalar (option 32)
-      REAL(wp) ::   zcm2dl, zsq2d , zztmpx, zztmpy                 ! local scalar (option 33)
-      REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep, zu, ahm_max       ! local scalar (option 34)
+      REAL(wp) ::   zcm2dl, zsq2d                                  ! local scalar (option 33)
+      REAL(wp) ::   ahmt_max, ahmf_max, zztmpx, zztmpy             ! local scalar (option 33/34)
+      REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep, zu                ! local scalar (option 34)
       !!----------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('ldf_dyn')
@@ -698,15 +697,16 @@ CONTAINS
             !
             CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
             !
-            !== stabilit criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahm_max = (7000.0_wp**2)/(8.0_wp*1800.0_wp) ! needs updating to be model aware
+            !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+            ahmt_max = ( MIN( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
+            ahmf_max = ( MIN( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
             !
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
                      zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) ) + dwzmagsq(ji,jj,jk)
-                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahm_max )
+                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                   END DO
                END DO
             END DO
@@ -716,7 +716,7 @@ CONTAINS
                   DO ji = 1, fs_jpim1 ! vector opt.
                      zsq2d = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahm_max )
+                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                   END DO
                END DO
             END DO
@@ -730,10 +730,10 @@ CONTAINS
 			   DO jj = 2, jpjm1
 				   DO ji = 2, jpim1
 				      !== grid scale velocity ==!
-				      zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
-				      zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
-				      zu =  SQRT(zztmpx**2 + zztmpy**2)
-				      rre(ji,jj,jk) = ( zu * SQRT(esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
+				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
 			      END DO
             END DO
          END DO
@@ -782,14 +782,14 @@ CONTAINS
                   END DO
                END DO
             END DO
-            !
-            DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
-                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
-                  END DO
-               END DO
-            END DO
+!            !
+!            DO jk = 1, jpkm1
+!               DO jj = 1, jpjm1
+!                  DO ji = 1, jpim1
+!                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
+!                  END DO
+!               END DO
+!            END DO
             !
             !== calculate vertical vorticity (f+zeta) on f-point ==!
             DO jk = 1, jpkm1                                 ! Horizontal slab
@@ -872,8 +872,9 @@ CONTAINS
             END DO
             !
             !== calculate viscosity coefficient ==!
-            !== stabilit criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahm_max = (7000.0_wp**2)/(8.0_wp*1800.0_wp) ! needs updating to be model aware
+            !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+            ahmt_max = ( MIN( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
+            ahmf_max = ( MIN( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
             !
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
@@ -885,7 +886,7 @@ CONTAINS
                         &  ddivmagsq(ji-1,jj-1,jk) )
 !                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
                      !== Set max value on viscosity coefficient ==!
-                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahm_max )
+                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
                   END DO
                END DO
             END DO
@@ -901,7 +902,7 @@ CONTAINS
                         &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
 !                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
                      !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
-                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahm_max )
+                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
                   END DO
                END DO
             END DO
@@ -912,13 +913,13 @@ CONTAINS
          !
          ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
          DO jk = 1, jpkm1
-			   DO jj = 2, jpj
-				   DO ji = 2, jpi
+			   DO jj = 2, jpjm1
+				   DO ji = 2, jpim1
 				      !== grid scale velocity ==!
-				      zztmpx = 0.5_wp * ( un(ji-1,jj  ,jk) + un(ji,jj,jk) )
-				      zztmpy = 0.5_wp * ( vn(ji  ,jj-1,jk) + vn(ji,jj,jk) )
-				      zu =  SQRT(zztmpx**2 + zztmpy**2)
-				      rre(ji,jj,jk) = ( zu * SQRT(esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
+				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
 			      END DO
             END DO
          END DO
@@ -942,7 +943,6 @@ CONTAINS
          CALL iom_put( "zbudx"   , zbudx(:,:,:) )     ! x component of buoyancy gradient T- point
          CALL iom_put( "zbudy"   , zbudy(:,:,:) )     ! y component of buoyancy gradient T- point
 !!         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
-         CALL iom_put( "mld_qg"  , mld_qg(:,:) )      ! QG Leith mixed layer depth
          CALL iom_put( "ahmt_qg" , ahmt_qg(:,:,:) )   ! PV contribution to QG Leith T-point
          CALL iom_put( "ahmt_div", ahmt_div(:,:,:) )  ! Div contribution to QG Leith T-point
          !
@@ -1090,21 +1090,11 @@ CONTAINS
 				      zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
 				         &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
 				         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-	!!                  tmpzstx(ji,jj,jk) = ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                 &
-	!!                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 )
-	!!                        zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-	!!                           &  ABS( ( zwzdx(ji,jj,jk) ) /                                           &
-	!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
-	!!                        tmpzstx(ji,jj,jk) = zwzdx(ji,jj,jk)/                                       &
-	!!                           &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 )
 				      zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
 				      !== y component of stretching ==!
 				      zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
 				         &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
 				         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-	!!                        zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-	!!                           &  ABS( ( zwzdy(ji,jj,jk) ) /                                           &
-	!!                          &  ( MAX( rbu(ji,jj,jk), rro2(ji,jj,jk) ) + zqglep2 ) ) )
 				      zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
 				   ENDIF
 				END DO
