@@ -698,8 +698,8 @@ CONTAINS
             CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
             !
             !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahmt_max = ( MIN( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
-            ahmf_max = ( MIN( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
+            ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
+            ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
             !
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
@@ -873,8 +873,8 @@ CONTAINS
             !
             !== calculate viscosity coefficient ==!
             !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahmt_max = ( MIN( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
-            ahmf_max = ( MIN( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
+            ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
+            ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
             !
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
