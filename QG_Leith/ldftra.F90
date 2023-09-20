@@ -480,14 +480,17 @@ CONTAINS
          ENDIF
          !
       CASE(  33, 34  )    !==  time varying 3D field  ==!   2D Leith (33) and QG Leith (34)
-         DO jk = 1, jpkm1
-            DO jj = 1, jpjm1
-               DO ji = 1, jpim1
-                  ahtu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-                  ahtv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
-               END DO
-            END DO
-         END DO
+         IF( ln_traldf_lap     ) THEN 
+		      DO jk = 1, jpkm1
+		         DO jj = 1, jpjm1
+		            DO ji = 1, jpim1
+		               ahtu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+		               ahtv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+		            END DO
+		         END DO
+		      END DO
+		      !== no ln_traldf_blp ==!
+		   ENDIF
          !
          CALL lbc_lnk_multi( 'ldftra', ahtu(:,:,1), 'U', 1. , ahtu(:,:,1), 'V', 1. )      ! lateral boundary condition
          !
@@ -496,14 +499,17 @@ CONTAINS
       IF( ln_ldfeiv .AND. ( nn_aei_ijk_t == 33 .OR. nn_aei_ijk_t == 34 ) ) THEN       ! eddy induced velocity coefficients
          !                                ! Leith coefficients are not considered seperately
          ! CALL ldf_eiv( kt, aei0, aeiu, aeiv ) ! does this function need to be called for Leith schemes???
-         DO jk = 1, jpkm1
-            DO jj = 1, jpjm1
-               DO ji = 1, jpim1
-                  aeiu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-                  aeiv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
-               END DO
-            END DO
-         END DO
+         IF( ln_traldf_lap     ) THEN
+		      DO jk = 1, jpkm1
+		         DO jj = 1, jpjm1
+		            DO ji = 1, jpim1
+		               aeiu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+		               aeiv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+		            END DO
+		         END DO
+		      END DO
+		      !== no ln_traldf_blp ==!
+		   ENDIF
          !
          CALL lbc_lnk_multi( 'ldftra', aeiu(:,:,1), 'U', 1. , aeiv(:,:,1), 'V', 1. )      ! lateral boundary condition
 !         !
