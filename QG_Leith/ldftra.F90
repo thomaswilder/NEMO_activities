@@ -74,11 +74,12 @@ MODULE ldftra
    REAL(wp), PUBLIC ::      rn_Le               !: lateral diffusive length    [m]
    
    !                                  ! Flag to control the type of lateral diffusive operator
-   INTEGER, PARAMETER, PUBLIC ::   np_ERROR  =-10   ! error in specification of lateral diffusion
-   INTEGER, PARAMETER, PUBLIC ::   np_no_ldf = 00   ! without operator (i.e. no lateral diffusive trend)
+!!   INTEGER, PARAMETER, PUBLIC ::   np_ERROR  =-10   ! error in specification of lateral diffusion
+!!   INTEGER, PARAMETER, PUBLIC ::   np_no_ldf = 00   ! without operator (i.e. no lateral diffusive trend)
    !                          !!      laplacian     !    bilaplacian    !
-   INTEGER, PARAMETER, PUBLIC ::   np_lap    = 10   ,   np_blp    = 20  ! iso-level operator
-   INTEGER, PARAMETER, PUBLIC ::   np_lap_i  = 11   ,   np_blp_i  = 21  ! standard iso-neutral or geopotential operator
+!!   INTEGER, PARAMETER, PUBLIC ::   np_lap    = 10   ,   np_blp    = 20  ! iso-level operator
+!!   INTEGER, PARAMETER, PUBLIC ::   np_lap_i  = 11   ,   np_blp_i  = 21  ! standard iso-neutral or geopotential operator
+   INTEGER, PARAMETER, PUBLIC ::   np_blp_i  = 21                       ! standard iso-neutral or geopotential operator
    INTEGER, PARAMETER, PUBLIC ::   np_lap_it = 12   ,   np_blp_it = 22  ! triad    iso-neutral or geopotential operator
 
    INTEGER , PUBLIC ::   nldf_tra      = 0         !: type of lateral diffusion used defined from ln_traldf_... (namlist logicals)
