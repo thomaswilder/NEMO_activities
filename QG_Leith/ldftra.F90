@@ -397,7 +397,7 @@ CONTAINS
    END SUBROUTINE ldf_tra_init
 
 
-   SUBROUTINE ldf_tra( kt, ahmt )
+   SUBROUTINE ldf_tra( kt )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_tra  ***
       !! 
@@ -420,6 +420,7 @@ CONTAINS
       !!
       !! ** action  :   ahtu, ahtv   update at each time step   
       !!                aeiu, aeiv      -       -     -    -   (if ln_ldfeiv=T) 
+      !!                aht/aei = ahm                          (if ln_ldfeiv=T and nn_aht/nn_aei = 33/34) 
       !!----------------------------------------------------------------------
       INTEGER, INTENT(in) ::   kt   ! time step
       !
@@ -477,7 +478,45 @@ CONTAINS
             END DO
          ENDIF
          !
+      CASE(  33, 34  )    !==  time varying 3D field  ==!   2D Leith (33) and QG Leith (34)
+         DO jk = 1, jpkm1
+            DO jj = 1, jpjm1
+               DO ji = 1, jpim1
+                  ahtu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+                  ahtv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldftra', ahtu(:,:,1), 'U', 1. , ahtu(:,:,1), 'V', 1. )      ! lateral boundary condition
+         !
       END SELECT
+      !
+      IF( ln_ldfeiv .AND. ( nn_aei_ijk_t == 33 .OR. nn_aei_ijk_t == 34 ) ) THEN       ! eddy induced velocity coefficients
+         !                                ! Leith coefficients are not considered seperately
+         ! CALL ldf_eiv( kt, aei0, aeiu, aeiv ) ! does this function need to be called for Leith schemes???
+         DO jk = 1, jpkm1
+            DO jj = 1, jpjm1
+               DO ji = 1, jpim1
+                  aeiu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+                  aeiv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldftra', aeiu(:,:,1), 'U', 1. , aeiv(:,:,1), 'V', 1. )      ! lateral boundary condition
+!         !
+!      ELSEIF( ln_ldfeiv .AND. nn_aei_ijk_t == 34 ) THEN
+!      	DO jk = 1, jpkm1
+!            DO jj = 1, jpjm1
+!               DO ji = 1, jpim1
+!                  aeiu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) )
+!                  aeiv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) )
+!               END DO
+!            END DO
+!         END DO
+         !
+      ENDIF
       !
       CALL iom_put( "ahtu_2d", ahtu(:,:,1) )   ! surface u-eddy diffusivity coeff.
       CALL iom_put( "ahtv_2d", ahtv(:,:,1) )   ! surface v-eddy diffusivity coeff.
@@ -511,9 +550,12 @@ CONTAINS
       !!                  !
       !!                  =-30 => = F(i,j,k)   = shape read in 'eddy_diffusivity.nc' file
       !!                  = 30    = F(i,j,k)   = 2D (case 20) + decrease with depth (case 10)
+      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!
       !! ** Action  :   aeiu , aeiv   :  initialized one for all or l_ldftra_time set to true
       !!                l_ldfeiv_time : =T if EIV coefficients vary with time
+      !!                nn_aei_ijk_t = 33/34 => aei assigned in ldf_tra
       !!----------------------------------------------------------------------
       INTEGER  ::   jk                     ! dummy loop indices
       INTEGER  ::   ierr, inum, ios, inn   ! local integer
@@ -628,6 +670,18 @@ CONTAINS
             CALL ldf_c2d( 'TRA', zUfac      , inn        , aeiu, aeiv )    ! surface value proportional to scale factor^inn
             CALL ldf_c1d( 'TRA', aeiu(:,:,1), aeiv(:,:,1), aeiu, aeiv )    ! reduction with depth
             !
+         CASE(  33  )      !==  time varying 3D field  ==!
+            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
+            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
+            !
+            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
+            !
+         CASE(  34  )       !==  time varying 3D field  ==!
+            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
+            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
+            !
+            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
+            !
          CASE DEFAULT
             CALL ctl_stop('ldf_tra_init: wrong choice for nn_aei_ijk_t, the type of space-time variation of aei')
          END SELECT
@@ -707,7 +761,7 @@ CONTAINS
             END DO
          END DO
       ENDIF
-
+      !
       DO jj = 2, jpjm1
          DO ji = fs_2, fs_jpim1   ! vector opt.
             zfw = MAX( ABS( 2. * omega * SIN( rad * gphit(ji,jj) ) ) , 1.e-10 )
@@ -717,7 +771,7 @@ CONTAINS
             zaeiw(ji,jj) = zRo(ji,jj) * zRo(ji,jj) * SQRT( zah(ji,jj) / zhw(ji,jj) ) * tmask(ji,jj,1)
          END DO
       END DO
-
+      !
       !                                         !==  Bound on eiv coeff.  ==!
       z1_f20 = 1._wp / (  2._wp * omega * sin( rad * 20._wp )  )
       DO jj = 2, jpjm1
