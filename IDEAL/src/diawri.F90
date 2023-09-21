@@ -470,15 +470,15 @@ CONTAINS
       CALL iom_put( "rhd", rhd )                      ! In-situ density anomaly (rho-rho0)/rho0 on T-grid !
       !
       IF( iom_use("rre") ) THEN                       ! Grid Reynolds number !
-         IF( ln_dynldf_lap )                          ! Laplacian, use (|U| delta_h / nu) !
+         IF( ln_dynldf_lap ) THEN                     ! Laplacian, use (|U| delta_h / nu) !
             DO jk = 1, jpkm1
 					DO jj = 2, jpjm1
 						DO ji = 2, jpim1
 						   !== grid scale velocity ==!
 						   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
 						   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-						   zu =  SQRT( zztmpx**2 + zztmpy**2 )
-						   z3d(ji,jj,jk) = ( zu * SQRT( e1e2t(ji,jj) ) ) / ahmt(ji,jj,jk)
+						   zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
+						   z3d(ji,jj,jk) = ( zztmp * SQRT( e1e2t(ji,jj) ) ) / ahmt(ji,jj,jk)
 					   END DO
 		         END DO
          	END DO
@@ -489,8 +489,8 @@ CONTAINS
 						   !== grid scale velocity ==!
 						   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
 						   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-						   zu =  SQRT( zztmpx**2 + zztmpy**2 )
-						   z3d(ji,jj,jk) = ( zu * ( SQRT( e1e2t(ji,jj) ) )**3 ) / ahmt(ji,jj,jk)
+						   zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
+						   z3d(ji,jj,jk) = ( zztmp * ( SQRT( e1e2t(ji,jj) ) )**3 ) / ahmt(ji,jj,jk)
 					   END DO
 		         END DO
          	END DO
