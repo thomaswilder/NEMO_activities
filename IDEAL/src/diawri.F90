@@ -136,16 +136,16 @@ CONTAINS
       CALL iom_put( "e3w" , e3w_n(:,:,:) )
       IF( iom_use("e3tdef") )   &
          CALL iom_put( "e3tdef"  , ( ( e3t_n(:,:,:) - e3t_0(:,:,:) ) / e3t_0(:,:,:) * 100 * tmask(:,:,:) ) ** 2 )
-
+      !
       IF( ll_wd ) THEN
          CALL iom_put( "ssh" , (sshn+ssh_ref)*tmask(:,:,1) )   ! sea surface height (brought back to the reference used for wetting and drying)
       ELSE
          CALL iom_put( "ssh" , sshn )              ! sea surface height
       ENDIF
-
+      !
       IF( iom_use("wetdep") )   &                  ! wet depth
          CALL iom_put( "wetdep" , ht_0(:,:) + sshn(:,:) )
-      
+      !
       CALL iom_put( "toce", tsn(:,:,:,jp_tem) )    ! 3D temperature
       CALL iom_put(  "sst", tsn(:,:,1,jp_tem) )    ! surface temperature
       IF ( iom_use("sbt") ) THEN
@@ -157,7 +157,7 @@ CONTAINS
          END DO
          CALL iom_put( "sbt", z2d )                ! bottom temperature
       ENDIF
-      
+      !
       CALL iom_put( "soce", tsn(:,:,:,jp_sal) )    ! 3D salinity
       CALL iom_put(  "sss", tsn(:,:,1,jp_sal) )    ! surface salinity
       IF ( iom_use("sbs") ) THEN
@@ -186,7 +186,7 @@ CONTAINS
          CALL lbc_lnk( 'diawri', z2d, 'T', 1. )
          CALL iom_put( "taubot", z2d )           
       ENDIF
-         
+      !
       CALL iom_put( "uoce", un(:,:,:) )            ! 3D i-current
       CALL iom_put(  "ssu", un(:,:,1) )            ! surface i-current
       IF ( iom_use("sbu") ) THEN
@@ -198,7 +198,7 @@ CONTAINS
          END DO
          CALL iom_put( "sbu", z2d )                ! bottom i-current
       ENDIF
-      
+      !
       CALL iom_put( "voce", vn(:,:,:) )            ! 3D j-current
       CALL iom_put(  "ssv", vn(:,:,1) )            ! surface j-current
       IF ( iom_use("sbv") ) THEN
@@ -210,7 +210,7 @@ CONTAINS
          END DO
          CALL iom_put( "sbv", z2d )                ! bottom j-current
       ENDIF
-
+      !
       CALL iom_put( "woce", wn )                   ! vertical velocity
       IF( iom_use('w_masstr') .OR. iom_use('w_masstr2') ) THEN   ! vertical mass transport & its square value
          ! Caution: in the VVL case, it only correponds to the baroclinic mass transport.
@@ -221,14 +221,14 @@ CONTAINS
          CALL iom_put( "w_masstr" , z3d )  
          IF( iom_use('w_masstr2') )   CALL iom_put( "w_masstr2", z3d(:,:,:) * z3d(:,:,:) )
       ENDIF
-
+      !
       CALL iom_put( "avt" , avt )                  ! T vert. eddy diff. coef.
       CALL iom_put( "avs" , avs )                  ! S vert. eddy diff. coef.
       CALL iom_put( "avm" , avm )                  ! T vert. eddy visc. coef.
-
+      !
       IF( iom_use('logavt') )   CALL iom_put( "logavt", LOG( MAX( 1.e-20_wp, avt(:,:,:) ) ) )
       IF( iom_use('logavs') )   CALL iom_put( "logavs", LOG( MAX( 1.e-20_wp, avs(:,:,:) ) ) )
-
+      !
       IF ( iom_use("socegrad") .OR. iom_use("socegrad2") ) THEN
          z3d(:,:,jpk) = 0.
          DO jk = 1, jpkm1
@@ -247,7 +247,7 @@ CONTAINS
          z3d(:,:,:) = SQRT( z3d(:,:,:) )
          CALL iom_put( "socegrad" ,  z3d )          ! module of sal gradient
       ENDIF
-         
+      !
       IF ( iom_use("sstgrad") .OR. iom_use("sstgrad2") ) THEN
          DO jj = 2, jpjm1                                    ! sst gradient
             DO ji = fs_2, fs_jpim1   ! vector opt.
@@ -263,7 +263,7 @@ CONTAINS
          z2d(:,:) = SQRT( z2d(:,:) )
          CALL iom_put( "sstgrad" ,  z2d )          ! module of sst gradient
       ENDIF
-         
+      !
       ! heat and salt contents
       IF( iom_use("heatc") ) THEN
          z2d(:,:)  = 0._wp 
@@ -276,7 +276,7 @@ CONTAINS
          END DO
          CALL iom_put( "heatc", rau0_rcp * z2d )   ! vertically integrated heat content (J/m2)
       ENDIF
-
+      !
       IF( iom_use("saltc") ) THEN
          z2d(:,:)  = 0._wp 
          DO jk = 1, jpkm1
@@ -314,7 +314,7 @@ CONTAINS
          END DO
          CALL lbc_lnk( 'diawri', z3d, 'T', 1. )
          CALL iom_put( "eken", z3d )                 ! kinetic energy
-
+         !
          z2d(:,:)  = 0._wp 
          DO jk = 1, jpkm1
             DO jj = 1, jpj
@@ -468,6 +468,38 @@ CONTAINS
       CALL iom_put( "bn2", rn2 )                      ! Brunt-Vaisala buoyancy frequency (N^2) on W-grid !
       !
       CALL iom_put( "rhd", rhd )                      ! In-situ density anomaly (rho-rho0)/rho0 on T-grid !
+      !
+      IF( iom_use("rre") ) THEN                       ! Grid Reynolds number !
+         IF( ln_dynldf_lap )                          ! Laplacian, use (|U| delta_h / nu) !
+            DO jk = 1, jpkm1
+					DO jj = 2, jpjm1
+						DO ji = 2, jpim1
+						   !== grid scale velocity ==!
+						   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+						   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+						   zu =  SQRT( zztmpx**2 + zztmpy**2 )
+						   z3d(ji,jj,jk) = ( zu * SQRT( e1e2t(ji,jj) ) ) / ahmt(ji,jj,jk)
+					   END DO
+		         END DO
+         	END DO
+         ELSEIF( ln_dynldf_blp ) THEN                 ! Bilaplacian, use (|U| delta_h^3 / nu) !
+         	DO jk = 1, jpkm1
+					DO jj = 2, jpjm1
+						DO ji = 2, jpim1
+						   !== grid scale velocity ==!
+						   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+						   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+						   zu =  SQRT( zztmpx**2 + zztmpy**2 )
+						   z3d(ji,jj,jk) = ( zu * ( SQRT( e1e2t(ji,jj) ) )**3 ) / ahmt(ji,jj,jk)
+					   END DO
+		         END DO
+         	END DO
+         ENDIF
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', z3d, 'T', 1. )
+         CALL iom_put( "rre"     , z3d(:,:,:) )
+         !
+      ENDIF
       !
       IF (ln_dia25h)   CALL dia_25h( kt )             ! 25h averaging
       IF( ln_timing )   CALL timing_stop('dia_wri')
