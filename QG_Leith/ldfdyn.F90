@@ -82,7 +82,7 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivdx, hdivdy !: x and y components of horizontal gradients of divergence  at T- points (QG Leith)
 !!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbu          !: Buoyancy at T- point (QG Leith)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2, rre    !: Burger number, square of Rossby, Froude, and grid Reynolds number at T- points
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2    !: Burger number, square of Rossby, Froude, and grid Reynolds number at T- points
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
@@ -362,7 +362,7 @@ CONTAINS
             !
             !                          ! allocate arrays used in ldf_dyn. 
             ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,      &
-               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                              &
+               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                                                 &
                &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,     &
                &  STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate 2D Leith arrays')
@@ -381,7 +381,7 @@ CONTAINS
             zwz(:,:,:) = 0._wp
             dwzmagsq(:,:,:) = 0._wp
             ddivmagsq(:,:,:) = 0._wp
-            rre(:,:,:) = 0._wp
+!!            rre(:,:,:) = 0._wp
             zwzdx(:,:,:) = 0._wp
             zwzdy(:,:,:) = 0._wp
             hdivdx(:,:,:) = 0._wp
@@ -396,7 +396,7 @@ CONTAINS
             !                          ! allocate arrays used in ldf_dyn. 
             ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
                &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
-               &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,  rre(jpi,jpj,jpk) ,                                     &
+               &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,                                                         &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
                &  tmpzstx(jpi,jpj,jpk) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                                  &
@@ -428,7 +428,7 @@ CONTAINS
             zwzdy(:,:,:) = 0._wp
             hdivdx(:,:,:) = 0._wp
             hdivdy(:,:,:) = 0._wp
-            rre(:,:,:) = 0._wp
+!!            rre(:,:,:) = 0._wp
             rbu(:,:,:) = 0._wp
             rro2(:,:,:) = 0._wp
             rfr2(:,:,:) = 0._wp
@@ -725,27 +725,27 @@ CONTAINS
          ENDIF
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
-         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
-         DO jk = 1, jpkm1
-			   DO jj = 2, jpjm1
-				   DO ji = 2, jpim1
-				      !== grid scale velocity ==!
-				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
-				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
-			      END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+!         !
+!         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
+!         DO jk = 1, jpkm1
+!			   DO jj = 2, jpjm1
+!				   DO ji = 2, jpim1
+!				      !== grid scale velocity ==!
+!				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+!				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+!				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
+!				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+!			      END DO
+!            END DO
+!         END DO
+!         !
+!         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
          !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:)
          !
          !== 2D Leith diagnostics ==!
-         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
+!!         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
          CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
          CALL iom_put( "zwzdy"   , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
          CALL iom_put( "hdivdx"  , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
@@ -819,7 +819,7 @@ CONTAINS
             !
             CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
             !
-            !== Compute stretching term at first time step index and then at daily intervals ==!
+            !== Compute stretching term at first time step index and then at specified intervals ** runs at every timestep ** ==!
             IF( kt == kit000 ) THEN       !! compute stretching subroutine
                !
                zstlimx(:,:,:) = 0._wp
@@ -896,8 +896,8 @@ CONTAINS
             END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
-            !
-            IF(lwp) WRITE(numout,*) 'dwzmagsq(151,627,73) is', ahmt_qg(151,627,73)
+!            !
+!            IF(lwp) WRITE(numout,*) 'dwzmagsq(151,627,73) is', ahmt_qg(151,627,73)
             !
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
@@ -915,26 +915,26 @@ CONTAINS
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
-         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
-         DO jk = 1, jpkm1
-			   DO jj = 2, jpjm1
-				   DO ji = 2, jpim1
-				      !== grid scale velocity ==!
-				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
-				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
-			      END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
-         !
+!         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
+!         DO jk = 1, jpkm1
+!			   DO jj = 2, jpjm1
+!				   DO ji = 2, jpim1
+!				      !== grid scale velocity ==!
+!				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+!				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+!				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
+!				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+!			      END DO
+!            END DO
+!         END DO
+!         !
+!         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+!         !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:)
          !
          !== QG Leith diagnostics ==!
-         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
+!!         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
          CALL iom_put( "rro2"    , rro2(:,:,:) )      ! square of Rossby number T- point
          CALL iom_put( "rbu"     , rbu(:,:,:) )       ! Burger number T- point
          CALL iom_put( "rfr2"    , rfr2(:,:,:) )      ! square of Froude number T- point
