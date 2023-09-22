@@ -133,6 +133,7 @@ CONTAINS
       INTEGER  ::   ji, jj, jk                     ! dummy loop indices
       INTEGER  ::   ioptio, ierr, inum, ios, inn   ! local integer
       REAL(wp) ::   zah0, zah_max, zUfac           ! local scalar
+!      REAL(wp) ::   zztmp, zztmpx, zztmpy          ! local scalar
       CHARACTER(len=5) ::   cl_Units               ! units (m2/s or m4/s)
       !!
       NAMELIST/namdyn_ldf/ ln_dynldf_OFF, ln_dynldf_lap, ln_dynldf_blp,   &   ! type of operator
@@ -316,6 +317,28 @@ CONTAINS
             IF(lwp) WRITE(numout,*) '           using a fixed viscous velocity = ', rn_Uv  ,' m/s   and   Lv = Max(e1,e2)'
             IF(lwp) WRITE(numout,*) '           maximum reachable coefficient (at the Equator) = ', zah_max, cl_Units, '  for e1=1°)'
             CALL ldf_c2d( 'DYN', zUfac      , inn        , ahmt, ahmf )         ! surface value proportional to scale factor^inn
+!            !
+!            ALLOCATE( rre(jpi,jpj,jpk) , STAT=ierr )
+!            IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate 2D Biharmonic arrays')
+!            !
+!         	! == Compute Biharmonic grid Reynolds number (|U| delta_h^3 / nu) as shown in Megann and Storkey (2021) ==!
+!         	rre(:,:,:) = 0._wp
+!         	!
+!		      DO jk = 1, jpkm1
+!					DO jj = 2, jpjm1
+!						DO ji = 2, jpim1
+!							!== grid scale velocity ==!
+!							zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+!							zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+!							zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
+!							rre(ji,jj,jk) = ( zztmp * ( SQRT( e1e2t(ji,jj) ) )**3 ) / ahmt(ji,jj,1)
+!						END DO
+!			      END DO
+!		   	END DO
+!      		!
+!         	CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+!         	!
+!         	CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
             !
          CASE( -30  )      !== fixed 3D shape read in file  ==!
             IF(lwp) WRITE(numout,*) '   ==>>>   eddy viscosity = F(i,j,k) read in eddy_viscosity_3D.nc file'

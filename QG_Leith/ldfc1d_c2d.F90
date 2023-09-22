@@ -16,7 +16,7 @@ MODULE ldfc1d_c2d
    USE phycst         ! physical constants
    !
    USE in_out_manager ! I/O manager
-   USE iom            ! I/O module
+!   USE iom            ! I/O module
    USE lib_mpp        ! distribued memory computing library
    USE lbclnk         ! ocean lateral boundary conditions (or mpp link)
 
@@ -132,8 +132,8 @@ CONTAINS
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       INTEGER  ::   inn          ! local integer
-      REAL(wp) ::   zztmp, zztmpx, zztmpy             ! local scalar
-      REAL(wp), DIMENSION(jpi,jpj,jpk) ::   z3d       ! 3D workspace 
+!      REAL(wp) ::   zztmp, zztmpx, zztmpy             ! local scalar
+!      REAL(wp), DIMENSION(jpi,jpj,jpk) ::   z3d       ! 3D workspace 
       !!----------------------------------------------------------------------
       !
       IF(lwp) WRITE(numout,*)
@@ -149,23 +149,23 @@ CONTAINS
                pah2(ji,jj,1) = pUfac * MAX( e1f(ji,jj) , e2f(ji,jj) )**knn
             END DO
          END DO
-         !
-         ! == Compute Biharmonic grid Reynolds number (|U| delta_h^3 / nu) as shown in Megann and Storkey (2021) ==!
-         DO jk = 1, jpkm1
-				DO jj = 2, jpjm1
-					DO ji = 2, jpim1
-					   !== grid scale velocity ==!
-					   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-					   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-					   zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
-					   z3d(ji,jj,jk) = ( zztmp * ( SQRT( e1e2t(ji,jj) ) )**3 ) / pah1(ji,jj,1)
-				   END DO
-	         END DO
-      	END DO
-      	!
-         CALL lbc_lnk_multi( 'ldfdyn', z3d, 'T', 1. )
-         !
-         CALL iom_put( "rre"     , z3d(:,:,:) )       ! grid Reynolds number T- point
+!         !
+!         ! == Compute Biharmonic grid Reynolds number (|U| delta_h^3 / nu) as shown in Megann and Storkey (2021) ==!
+!         DO jk = 1, jpkm1
+!				DO jj = 2, jpjm1
+!					DO ji = 2, jpim1
+!					   !== grid scale velocity ==!
+!					   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
+!					   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
+!					   zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
+!					   z3d(ji,jj,jk) = ( zztmp * ( SQRT( e1e2t(ji,jj) ) )**3 ) / pah1(ji,jj,1)
+!				   END DO
+!	         END DO
+!      	END DO
+!      	!
+!         CALL lbc_lnk_multi( 'ldfdyn', z3d, 'T', 1. )
+!         !
+!         CALL iom_put( "rre"     , z3d(:,:,:) )       ! grid Reynolds number T- point
          !
       CASE( 'TRA' )                       ! U- and V-points
          DO jj = 1, jpj 
