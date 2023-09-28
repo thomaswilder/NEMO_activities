@@ -18,12 +18,15 @@ n.b. a channel model confiuration `CANAL` already exists in the NEMO `cfgs` dire
 - Includes modifications to `ldfdyn.F90` for the implmentation of the Leith schemes in NEMO. 
 - Changes to `step.F90` for the inclusion of the Leith Schemes.
 - Additions to `oce.F90` for daily stretching calculations in QG Leith.
+- Modifications to `ldftrac.F90` for the implementation of Leith schemes as GM/Redi coefficients. Currently in the testing stage.
 - A `documentation.md` file that documents the progress.
-The Leith schemes are still very much in the testing stage and are prone to errors. The 2D Leith scheme appears to run well in both idealised and realistic NEMO setups. The QG Leith runs fine in an idealised setting, and may even work in a realistic configuration...
+The Leith schemes are still very much in the testing stage and may be prone to errors. Both schemes run well in idealised and realistic configurations without crashing.
 
 **ORCA025**<br/>
-The QG Leith scheme in `/QG_Leith` is currently being tested. Watch this space.
+The Leith schemes are being tested in realistic forced ocean sea-ice configurations.
 
-The ORCA025 configuration we are testing the Leith schemes on is based on GOSI9p8.0 found [here](https://code.metoffice.gov.uk/trac/GO/wiki/GODocumentation/GO8.0/GO8Releases), and is the suite entitled `u-cn052(M)`. The `M` stands for Monsoon2, the Met Office's HPC.
+Similarly to `/IDEAL`, we employ `pyCDFTOOLS` with minor modifications made. We hope to bring both versions together so they are cross compatible, and can be used with any configuration.
+
+More details to be added here in due course.
 
 
