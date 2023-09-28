@@ -920,8 +920,6 @@ CONTAINS
             END DO
             !
             CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
-!            !
-!            IF(lwp) WRITE(numout,*) 'dwzmagsq(151,627,73) is', ahmt_qg(151,627,73)
             !
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
