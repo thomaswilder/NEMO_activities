@@ -73,7 +73,7 @@ MODULE ldfdyn
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   dtensq       !: horizontal tension squared         (Smagorinsky only)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   dshesq       !: horizontal shearing strain squared (Smagorinsky only)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   esqt, esqf   !: Square of the local gridscale (e1e2/(e1+e2))**2 (Smag) or ( e1e2 ) (2D/QG Leith)
-   REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   dwzmagsq     !: square of magnitude of gradient of vorticity (2D/QG Leith)
+   REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   dzwzmagsq     !: square of magnitude of gradient of vorticity (2D/QG Leith)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ddivmagsq    !: square of magnitude of gradient of divergence (2D/QG Leith)
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivnqg      !: Horizontal divergence on t-point (2D/QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwz          !: Vorticity on f-point (2D/QG Leith)
@@ -384,7 +384,7 @@ CONTAINS
             l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
             !
             !                          ! allocate arrays used in ldf_dyn. 
-            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,      &
+            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dzwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,     &
                &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                              &
                &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,     &
                &  STAT=ierr )
@@ -398,12 +398,10 @@ CONTAINS
             END DO
             !
             !== initialise key variables with zeros (probably don't need to do this??) ==!
-            dwzmagsq(:,:,:) = 0._wp
+            dzwzmagsq(:,:,:) = 0._wp
             ddivmagsq(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             zwz(:,:,:) = 0._wp
-            dwzmagsq(:,:,:) = 0._wp
-            ddivmagsq(:,:,:) = 0._wp
             rre(:,:,:) = 0._wp
             zwzdx(:,:,:) = 0._wp
             zwzdy(:,:,:) = 0._wp
@@ -417,7 +415,7 @@ CONTAINS
             l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
             !
             !                          ! allocate arrays used in ldf_dyn. 
-            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
+            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dzwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
                &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
                &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                                      &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
@@ -435,7 +433,7 @@ CONTAINS
             END DO
             !
             !== initialise key variables with zeros ==!
-            dwzmagsq(:,:,:) = 0._wp
+            dzwzmagsq(:,:,:) = 0._wp
             ddivmagsq(:,:,:) = 0._wp
             zbu(:,:,:) = 0._wp
             zbudxup(:,:,:) = 0._wp
@@ -684,12 +682,12 @@ CONTAINS
                      zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
                         &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
                      zwzdy(ji,jj,jk) = zztmpy
-                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+                     dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
             !
-            CALL lbc_lnk_multi( 'ldfdyn', dwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
+            CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
             !
             DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
                DO jj = 2, jpjm1
@@ -730,7 +728,7 @@ CONTAINS
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
                      zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &  ddivmagsq(ji-1,jj-1,jk) ) + dwzmagsq(ji,jj,jk)
+                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
                      ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                   END DO
                END DO
@@ -739,8 +737,8 @@ CONTAINS
             DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1 ! vector opt.
-                     zsq2d = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
-                        &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
                      ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                   END DO
                END DO
@@ -755,10 +753,9 @@ CONTAINS
 			   DO jj = 2, jpjm1
 				   DO ji = 2, jpim1
 				      !== grid scale velocity ==!
-				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
-				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+				      zztmp = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
+                     &               ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
+				      rre(ji,jj,jk) = ( SQRT( zztmp ) * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
 			      END DO
             END DO
          END DO
@@ -894,7 +891,7 @@ CONTAINS
                   DO ji = 1, jpi
                      zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
                      zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
-                     dwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+                     dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
                   END DO
                END DO
             END DO
@@ -908,8 +905,8 @@ CONTAINS
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
                      zsqqg = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &  ddivmagsq(ji-1,jj-1,jk) ) + dwzmagsq(ji,jj,jk)
-                     ahmt_qg(ji,jj,jk) = dwzmagsq(ji,jj,jk)
+                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
+                     ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
                      ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) )
 !                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
@@ -924,8 +921,8 @@ CONTAINS
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1 ! vector opt.
-                     zsqqg = r1_4 * ( dwzmagsq(ji,jj,jk) + dwzmagsq(ji+1,jj,jk) + dwzmagsq(ji,jj+1,jk) +     &
-                        &  dwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+                     zsqqg = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
 !                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
                      !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
                      ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
@@ -942,10 +939,9 @@ CONTAINS
 			   DO jj = 2, jpjm1
 				   DO ji = 2, jpim1
 				      !== grid scale velocity ==!
-				      zztmpx = r1_2 * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zztmpy = r1_2 * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-				      zu =  SQRT( zztmpx**2 + zztmpy**2 )
-				      rre(ji,jj,jk) = ( zu * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
+				      zztmp = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
+                     &               ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
+				      rre(ji,jj,jk) = ( SQRT( zztmp ) * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
 			      END DO
             END DO
          END DO
@@ -1085,9 +1081,8 @@ CONTAINS
 			DO jj = 2, jpj
 				DO ji = 2, jpi
 				   !== grid scale velocity squared ==!
-				   zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) )
-				   zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) )
-				   zusq =  zztmpx**2 + zztmpy**2
+				   zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
+                  &              ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
 				   !== square of Rossby number U^2/(f^2 * A) ==!
 				   rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
 				   !== averaging square of buoyancy frequency onto t-grid ==!
