@@ -289,3 +289,63 @@ We set up an eddy-permitting `IDEAL` configuration:
 - Create `domcfg` file from `bathy_meter.nc` in `tools/DOMAINcfg`,
 - Create `mesh_mask.nc` then `resto.nc`,
 - Test QG Leith...
+
+
+## Testing QG Leith as GM
+
+### 21/9/23
+QG Leith has been implemented as an option for mass and tracer diffusivity through modifying `ldftra.f90`, `step.f90`, and `oce.f90`. See the folder `NEMO_activities/QG_Leith` for details.
+
+The `namelist_cfg` has been modified accordingly:
+- `ln_ldfeiv = .true.` and `nn_aei_ijk_t = 33/34` are set in `&namtra_eiv`.
+- `ln_traldf_lap = .true.` and `nn_aht_ijk_t = 33/34` are set in `&namtra_ldf`.
+- QG Leith viscosity is also set and must be made so otherwise the above will not work.
+
+On first appearance, the GM run has a similar viscosity coefficient pattern as the previous runs (Biharm, 2D/QG Leith). There are noise patterns, but these do not exceed the stability criterion $\Delta_h/(8 \times \Delta_t)$, which is about 15,000 m^2^/s. The grid Reynolds number exceeds the limit for stable flow almost everywhere ($Re>>2$). Is this because GM is turned on? Could do with adding this diagnostic to `diawri.f90` so future runs can compute this.
+
+Checking back over the relative vorticity fields, we actually see a lot of grid scale noise in the Leith schemes. Is this an issue?
+
+Large grid reynolds number may be due to incorrect `ahmt` value? Using `print *` statements in `diawri.f90` shows biharmonic `ahmt` is only 288675, which is incorrect, and creates a large $Re$. However, using print statements in `ldfc1d_c2d.F90` shows `ahmt=8e+10`, which is correct.
+
+
+### 22/9/23
+Regarding the grid Reynolds number:
+- Model hangs and crashes when trying to calculate in either `ldfc1d_c2d.F90` or `ldfdyn.F90` for biharmonic choice `nn_ahm_ijk_t=20`.
+- Calculation will be done offline.
+
+
+### 27/9/23
+Some suggestions made by Julian and Dave to fix the noise patterns:
+- Ramp up the tuning parameter \lambda, and possibly set up two parameters, one for vorticity and one for divergence, like MITgcm.
+- Try GYRE simulation?
+- Use full eos, not simplified.
+- Use varying level thickness `e_3`.
+
+Ramping up \lambda to 2.0 in QG Leith reduces the noise in relative vorticity field. 
+
+The starry night sky appears when the scheme transitions between 2D Leith and QG Leith at mixed layer depth, so we will modify `namzdf_tke`,
+- Instead of adding `tke` source below mixed layer so `nn_etau=1`, we add it just at base of mixed layer `nn_etau=2`. Possibly a minor improvement at year 1.
+- Let's increase fraction of surface tke that penetrates below ML, so `rn_efr = 0.2`. Doesn't really have an impact.
+
+Perhaps we try varying `e_3` thickness in a future test?
+
+
+### 28/09/23
+Reverting back to `nn_etau=1` and `rn_efr=0.05`.
+
+Using a non-linear free surface, `ln_linssh=.false.` so vertical grid spaces vary in time with the sea surface.
+- Needed to change horizontal pressure gradient calculation to `ln_hpg_sco` a standard jacobian formulation.
+- If this works, need to change how mean diagnostics are computed in `file_def...`
+
+Still has the starry night sky.
+
+I wonder if we can argue that these starry night skies are not noise?
+
+Lets keep the nonlinear free surface, but inject more tke, so `rn_efr=0.5`?
+- No real difference, so lets put it back to the default of 0.05.
+
+Going to try the FCT tracer advection scheme, so `ln_traadv_fct=.true.`, `nn_fct_h=2`, `nn_fct_v=2`.
+
+
+### 4/10/23
+Have tried increasing the diffusion on temperature by an order of magnitude to 10^10, but no real change.
