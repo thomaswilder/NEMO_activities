@@ -1088,10 +1088,10 @@ CONTAINS
 				   !== averaging square of buoyancy frequency onto t-grid ==!
 				   IF( jk < mbkt(ji,jj) ) THEN
 				      !== accounting for negative N^2 ==!
-				      znsq = r1_2 * ( pn2(ji,jj,jk) + pn2(ji,jj,jk+1) ) * tmask(ji,jj,jk)
+				      znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
 				   ELSE
 				      !== stratification is continuous at bottom ==!
-				      znsq = pn2(ji,jj,jk)
+				      znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
 				   ENDIF
 				   !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
 				   rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
