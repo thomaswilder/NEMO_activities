@@ -1105,25 +1105,25 @@ CONTAINS
 		CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1.  )
 		!
 		!== are we in the QG limit? Find the stretching value in x and y components ==!
-		DO jk = 1, jpkm1
-			DO jj = 1, jpj
-				DO ji = 1, jpi
-				   !== are we below the mixed layer and above the sea floor? ==!
-				   IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
-						!== x component of stretching ==!
-				      zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-				         &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-				         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-				      zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
-				      !== y component of stretching ==!
-				      zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-				         &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-				         &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-				      zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
-				   ENDIF
-				END DO
-			END DO
-		END DO
+      DO jk = 1, jpkm1
+         DO jj = 1, jpj
+            DO ji = 1, jpi
+               !== are we below the mixed layer and above the sea floor? ==!
+               IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
+                  !== x component of stretching ==!
+                  zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
+                     &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+                  zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
+                  !== y component of stretching ==!
+                  zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
+                     &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+                  zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
+               ENDIF
+            END DO
+         END DO
+      END DO
 !      !
 !      IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
 !      IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
