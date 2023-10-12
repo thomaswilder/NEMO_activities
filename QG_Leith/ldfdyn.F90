@@ -1076,34 +1076,34 @@ CONTAINS
       END DO
       !
       !== calculate the Burger number and square of Rossby number on t-point ==!
-		!== calculate over entire domain for diagnostics ==!
-		DO jk = 1, jpkm1
-			DO jj = 2, jpj
-				DO ji = 2, jpi
-				   !== grid scale velocity squared ==!
-				   zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
+      !== calculate over entire domain for diagnostics ==!
+      DO jk = 1, jpkm1
+         DO jj = 2, jpj
+            DO ji = 2, jpi
+               !== grid scale velocity squared ==!
+               zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
                   &              ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
-				   !== square of Rossby number U^2/(f^2 * A) ==!
-				   rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
-				   !== averaging square of buoyancy frequency onto t-grid ==!
-				   IF( jk < mbkt(ji,jj) ) THEN
-				      !== accounting for negative N^2 ==!
-				      znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
-				   ELSE
-				      !== stratification is continuous at bottom ==!
-				      znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
-				   ENDIF
-				   !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-				   rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
-				      &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
-				   !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
-				   rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
-				END DO
-			END DO
-		END DO
-		!
-		CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1.  )
-		!
+               !== square of Rossby number U^2/(f^2 * A) ==!
+               rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
+               !== averaging square of buoyancy frequency onto t-grid ==!
+               IF( jk < mbkt(ji,jj) ) THEN
+                  !== accounting for negative N^2 ==!
+                  znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
+               ELSE
+                  !== stratification is continuous at bottom ==!
+                  znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
+               ENDIF
+               !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
+               rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
+                  &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+               !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
+               rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
+            END DO
+         END DO
+      END DO
+      !
+      CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1.  )
+      !
 		!== are we in the QG limit? Find the stretching value in x and y components ==!
       DO jk = 1, jpkm1
          DO jj = 1, jpj
