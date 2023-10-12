@@ -1104,7 +1104,7 @@ CONTAINS
       !
       CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1.  )
       !
-		!== are we in the QG limit? Find the stretching value in x and y components ==!
+      !== are we in the QG limit? Find the stretching value in x and y components ==!
       DO jk = 1, jpkm1
          DO jj = 1, jpj
             DO ji = 1, jpi
