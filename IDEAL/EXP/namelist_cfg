@@ -20,14 +20,14 @@
 &namrun        !   parameters of the run
 !-----------------------------------------------------------------------
    cn_exp      =  "IDEAL"   !  experience name
-   nn_it000    =    23366881   !  
-   nn_itend    =    23366882   !  
-   nn_date0    =    06000610   !  
+   nn_it000    =         1399681   !  
+   nn_itend    =     1438560   !  
+   nn_date0    =    0361125   !  
    nn_leapy    =      30    !  Leap year calendar (1) or not (0)
-   nn_stock    =    23366882   !  
+   nn_stock    =     1438560   !  
    nn_write    =       0    !  frequency of write in the output file   (modulo referenced to first time step)
    nn_istate   =       0    !  output the initial state (1) or not (0)
-	ln_rstart	=  .true.                       	 !	
+	ln_rstart	=  .true.      !	
 /
 !-----------------------------------------------------------------------
 &namcfg        !   parameters of the configuration                      (default: user defined GYRE)
@@ -168,19 +168,43 @@
 &namtra_adv    !   advection scheme for tracer                          (default: NO selection)
 !-----------------------------------------------------------------------
    ln_traadv_cen = .true.   !  CEN scheme
-      nn_cen_h   = 2            !  =2/4, horizontal 2nd order CEN / 4th order CEN
+      nn_cen_h   = 4            !  =2/4, horizontal 2nd order CEN / 4th order CEN
       nn_cen_v   = 2            !  =2/4, vertical   2nd order CEN / 4th order COMPACT
+!	ln_traadv_fct = .true.    !  FCT sheme
+!		nn_fct_h   = 2
+!		nn_fct_v   = 2
 /
 !-----------------------------------------------------------------------
 &namtra_ldf    !   lateral diffusion scheme for tracers                 (default: NO selection)
 !-----------------------------------------------------------------------
 !!   ln_traldf_OFF   = .true.   !  No explicit diffusion
    ln_traldf_blp   = .true.
+!!   ln_traldf_lap   = .true.
    ln_traldf_iso   = .true.    !  standard operator
    ln_traldf_msc   = .true.    !  method of stabilizing correction
-   nn_aht_ijk_t    = 30        !  = 0   constant = 1/2  Ud*Ld   (lap case) 
+   nn_aht_ijk_t    = 20        !  = 0   constant = 1/2  Ud*Ld   (lap case) 
       rn_Ud        = 0.036           !  lateral diffusive velocity [m/s] used for case nn_aht_ijk_t=0
+!!      rn_Ud        = 0.025
       rn_Ld        = 10.e+3        !  lateral diffusive length   [m] used for case nn_aht_ijk_t=0
+/
+!-----------------------------------------------------------------------
+&namtra_eiv    !   eddy induced velocity param.                         (default: OFF)
+!-----------------------------------------------------------------------
+   ln_ldfeiv   = .false.   ! use eddy induced velocity parameterization
+      !
+      !                        !  Coefficients:
+      nn_aei_ijk_t    = 34          !  space/time variation of eddy coefficient:
+      !                             !   =-20 (=-30)    read in eddy_induced_velocity_2D.nc (..._3D.nc) file
+      !                             !   =  0           constant 
+      !                             !   = 10 F(k)      =ldf_c1d 
+      !                             !   = 20 F(i,j)    =ldf_c2d 
+      !                             !   = 21 F(i,j,t)  =Treguier et al. JPO 1997 formulation
+      !                             !   = 30 F(i,j,k)  =ldf_c2d * ldf_c1d
+      !                        !  time invariant coefficients:  aei0 = 1/2  Ue*Le 
+!!      rn_Ue        = 0.02           !  lateral diffusive velocity [m/s] (nn_aht_ijk_t= 0, 10, 20, 30)
+!!      rn_Le        = 200.e+3        !  lateral diffusive length   [m]   (nn_aht_ijk_t= 0, 10)
+      !
+      ln_ldfeiv_dia =.false.   ! diagnose eiv stream function and velocities
 /
 !-----------------------------------------------------------------------
 &namtra_dmp    !   tracer: T & S newtonian damping                      (default: NO selection)
@@ -216,6 +240,7 @@
 &namdyn_hpg    !   Hydrostatic pressure gradient option                 (default: NO selection)
 !-----------------------------------------------------------------------
    ln_hpg_zco  = .true.    !  z-coordinate - full steps
+!	ln_hpg_sco  = .true.    ! standard jacobian formulation
 /
 !-----------------------------------------------------------------------
 &namdyn_spg    !   surface pressure gradient                            (default: NO selection)
@@ -229,7 +254,7 @@
 	ln_dynldf_lap = .true.
    ln_dynldf_lev = .true.     !  iso-level
    nn_ahm_ijk_t  = 34         !  = 0  constant = 1/2  Uv*Lv   (lap case) 3D flow dependent viscosity scheme
-	rn_cqgc		  = 1.0			!  2D Leith tuning parameter, typically chosen to be 1
+	rn_cqgc		  = 2.0			!  Leith tuning parameter, typically chosen to be 1
 !!      rn_Uv      = 1.0              !  lateral viscous velocity [m/s] 
 !!      rn_Lv      = 10.e+3          !  lateral viscous length   [m]
 /
@@ -248,20 +273,21 @@
 &namzdf        !   vertical physics                                     (default: NO selection)
 !-----------------------------------------------------------------------
    ln_zdftke   = .true.       !  Turbulent Kinetic Energy closure       (T =>   fill namzdf_tke)
-!!   ln_zdfevd   = .true.       !  enhanced vertical diffusion
-!!      nn_evdm     =    0         ! apply on tracer (=0) or on tracer and momentum (=1)
-!!      rn_evd      =  100.        ! mixing coefficient [m2/s]
-   ln_zdfnpc   = .true.       ! non-penetrative convective adjustment scheme
+   ln_zdfevd   = .true.       !  enhanced vertical diffusion
+      nn_evdm     =    0         ! apply on tracer (=0) or on tracer and momentum (=1)
+      rn_evd      =  100.        ! mixing coefficient [m2/s]
+!!   ln_zdfnpc   = .true.       ! non-penetrative convective adjustment scheme
    !                       ! coefficients
    rn_avm0     =   1.2e-4     !  vertical eddy viscosity   [m2/s]       (background Kz if ln_zdfcst=F)
-   rn_avt0     =   5.5e-5        !  vertical eddy diffusivity [m2/s]       (background Kz if ln_zdfcst=F)
+   rn_avt0     =   1.2e-5        !  vertical eddy diffusivity [m2/s]       (background Kz if ln_zdfcst=F)
    nn_avb      =    0         !  profile for background avt & avm (=1) or not (=0)
    nn_havtb    =    0         !  horizontal shape for avtb (=1) or not (=0)
 /
 !-----------------------------------------------------------------------
 &namzdf_tke    !   turbulent eddy kinetic dependent vertical diffusion  (ln_zdftke =T)
 !-----------------------------------------------------------------------
-   nn_etau     =   1       !  penetration of tke below the mixed layer (ML) due to internal & intertial waves
+   nn_etau     =   1       ! 
+	rn_efr      =   0.05     ! 
 /
 !!======================================================================
 !!                  ***  Diagnostics namelists  ***                   !!
