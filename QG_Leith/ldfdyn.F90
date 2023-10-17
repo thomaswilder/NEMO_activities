@@ -53,9 +53,11 @@ MODULE ldfdyn
    REAL(wp), PUBLIC ::   rn_minfac             !: Multiplicative factor of theorectical minimum Smagorinsky viscosity
    REAL(wp), PUBLIC ::   rn_maxfac             !: Multiplicative factor of theorectical maximum Smagorinsky viscosity
    !                                        ! 2D Leith viscosity  (nn_ahm_ijk_t = 33) 
-   REAL(wp), PUBLIC ::   rn_c2dc               !: 2D Leith tuning parameter, typically set to 1
+   REAL(wp), PUBLIC ::   rn_c2dc_vor               !: 2D Leith tuning parameter for vorticity part, typically set to 1
+   REAL(wp), PUBLIC ::   rn_c2dc_div               !: 2D Leith tuning parameter for divergence part, typically set to 1
    !                                        ! QG Leith viscosity  (nn_ahm_ijk_t = 34) 
-   REAL(wp), PUBLIC ::   rn_cqgc               !: QG Leith tuning parameter, typically set to 1
+   REAL(wp), PUBLIC ::   rn_cqgc_vor               !: QG Leith tuning parameter for vorticity part, typically set to 1
+   REAL(wp), PUBLIC ::   rn_cqgc_div               !: QG Leith tuning parameter for divergence part, typically set to 1
    !                                        ! iso-neutral laplacian (ln_dynldf_lap=ln_dynldf_iso=T)
    REAL(wp), PUBLIC ::   rn_ahm_b              !: lateral laplacian background eddy viscosity  [m2/s]
 
@@ -140,8 +142,8 @@ CONTAINS
          &                 ln_dynldf_lev, ln_dynldf_hor, ln_dynldf_iso,   &   ! acting direction of the operator
          &                 nn_ahm_ijk_t , rn_Uv    , rn_Lv,   rn_ahm_b,   &   ! lateral eddy coefficient
          &                 rn_csmc      , rn_minfac    , rn_maxfac,       &   ! Smagorinsky settings
-         &                 rn_c2dc,                                       &   ! 2D Leith tuning parameter
-         &                 rn_cqgc                                            ! QG Leith tuning parameter
+         &                 rn_c2dc_vor, rn_c2dc_div,                      &   ! 2D Leith tuning parameters
+         &                 rn_cqgc_vor, rn_cqgc_div                           ! QG Leith tuning parameters
       !!----------------------------------------------------------------------
       !
       REWIND( numnam_ref )
@@ -182,10 +184,12 @@ CONTAINS
          WRITE(numout,*) '            upper limit (default 1.0)         rn_maxfac     = ', rn_maxfac
          !
          WRITE(numout,*) '      2D Leith settings (nn_ahm_ijk_t  = 33) :'
-         WRITE(numout,*) '         2D Leith coefficient                 rn_c2dc       = ', rn_c2dc
+         WRITE(numout,*) '         2D Leith coefficient vorticity       rn_c2dc_vor   = ', rn_c2dc_vor
+         WRITE(numout,*) '         2D Leith coefficient divergence      rn_c2dc_div   = ', rn_c2dc_div
          !
          WRITE(numout,*) '      QG Leith settings (nn_ahm_ijk_t  = 34) :'
-         WRITE(numout,*) '         QG Leith coefficient                 rn_cqgc       = ', rn_cqgc
+         WRITE(numout,*) '         QG Leith coefficient vorticity       rn_cqgc_vor   = ', rn_cqgc_vor
+         WRITE(numout,*) '         QG Leith coefficient divergence      rn_cqgc_div   = ', rn_cqgc_div
       ENDIF
 
       !
@@ -317,28 +321,6 @@ CONTAINS
             IF(lwp) WRITE(numout,*) '           using a fixed viscous velocity = ', rn_Uv  ,' m/s   and   Lv = Max(e1,e2)'
             IF(lwp) WRITE(numout,*) '           maximum reachable coefficient (at the Equator) = ', zah_max, cl_Units, '  for e1=1°)'
             CALL ldf_c2d( 'DYN', zUfac      , inn        , ahmt, ahmf )         ! surface value proportional to scale factor^inn
-!            !
-!            ALLOCATE( rre(jpi,jpj,jpk) , STAT=ierr )
-!            IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate 2D Biharmonic arrays')
-!            !
-!         	! == Compute Biharmonic grid Reynolds number (|U| delta_h^3 / nu) as shown in Megann and Storkey (2021) ==!
-!         	rre(:,:,:) = 0._wp
-!         	!
-!		      DO jk = 1, jpkm1
-!					DO jj = 2, jpjm1
-!						DO ji = 2, jpim1
-!							!== grid scale velocity ==!
-!							zztmpx = 0.5_wp * ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) * tmask(ji,jj,jk)
-!							zztmpy = 0.5_wp * ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) * tmask(ji,jj,jk)
-!							zztmp =  SQRT( zztmpx**2 + zztmpy**2 )
-!							rre(ji,jj,jk) = ( zztmp * ( SQRT( e1e2t(ji,jj) ) )**3 ) / ahmt(ji,jj,1)
-!						END DO
-!			      END DO
-!		   	END DO
-!      		!
-!         	CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
-!         	!
-!         	CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
             !
          CASE( -30  )      !== fixed 3D shape read in file  ==!
             IF(lwp) WRITE(numout,*) '   ==>>>   eddy viscosity = F(i,j,k) read in eddy_viscosity_3D.nc file'
@@ -660,7 +642,7 @@ CONTAINS
          IF( ln_dynldf_lap ) THEN        ! laplacian operator
             !
             ! allocate local variables !
-            zcm2dl = (rn_c2dc/rpi)**6        			! (C_2d/pi)^6
+            zcm2dl = (1/rpi)**6        			! (1/pi)^6
             !
             !== calculate vertical vorticity (f + zeta) on f-point ==!
             DO jk = 1, jpkm1                                 ! Horizontal slab
@@ -727,8 +709,12 @@ CONTAINS
             DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
-                     zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
+!!                     zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
+!!                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+                     zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+                        &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                        &      ddivmagsq(ji-1,jj-1,jk) ) )
                      ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                   END DO
                END DO
@@ -737,8 +723,11 @@ CONTAINS
             DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1 ! vector opt.
-                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+!!                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+!!                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+                     zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                        &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
                      ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                   END DO
                END DO
@@ -778,7 +767,7 @@ CONTAINS
          IF( ln_dynldf_lap ) THEN        ! laplacian operator
             !
             ! allocate local variables !
-            zcmqgl = (rn_cqgc/rpi)**6         			! (C_qg/pi)^6
+            zcmqgl = (1/rpi)**6         			! (1/pi)^6
             !
             !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
             ! initialization
@@ -904,13 +893,16 @@ CONTAINS
             DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1 ! vector opt.
-                     zsqqg = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
+!!                     zsqqg = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
                      ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
                      ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                         &  ddivmagsq(ji-1,jj-1,jk) )
 !                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
                      !== Set max value on viscosity coefficient ==!
+                     zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+                        &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                        &      ddivmagsq(ji-1,jj-1,jk) ) )
                      ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
                   END DO
                END DO
@@ -921,10 +913,12 @@ CONTAINS
             DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1 ! vector opt.
-                     zsqqg = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+!!                     zsqqg = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
 !                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
                      !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
+                     zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                        &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
                      ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
                   END DO
                END DO
