@@ -15,17 +15,21 @@ A brief outline is given below of what is included in each subdirectory. Further
 n.b. a channel model confiuration `CANAL` already exists in the NEMO `cfgs` directory. We think this configuration (`IDEAL`) offers more flexibility and ease of use without someone having to dive into FORTRAN code to make changes.
 
 **QG_Leith**
-- Includes modifications to `ldfdyn.F90` for the implmentation of the Leith schemes in NEMO. 
+- Includes modifications to `ldfdyn.F90` for the implementation of the Leith schemes in NEMO. 
 - Changes to `step.F90` for the inclusion of the Leith Schemes.
 - Additions to `oce.F90` for daily stretching calculations in QG Leith.
-- Modifications to `ldftrac.F90` for the implementation of Leith schemes as GM/Redi coefficients. Currently in the testing stage.
+- Modifications to `ldftra.F90` for the implementation of Leith schemes as GM/Redi coefficients. Currently in the testing stage.
 - A `documentation.md` file that documents the progress.
 The Leith schemes are still very much in the testing stage and may be prone to errors. Both schemes run well in idealised and realistic configurations without crashing.
 
 **ORCA025**<br/>
 The Leith schemes are being tested in realistic forced ocean sea-ice configurations.
 
-Similarly to `/IDEAL`, we employ `pyCDFTOOLS` with minor modifications made. We hope to bring both versions together so they are cross compatible, and can be used with any configuration.
+Similarly to `/IDEAL`, we employ `pyCDFTOOLS` with minor modifications made. We hope to bring both versions together so they are cross compatible, and can be used with any configuration. Scripts are also being generated to analyse the data e.g. `calc_cdfmoy.py`.
+
+Modifications relating to QG Leith in orca025 are also made to:
+
+- `ldftra.F90` which also includes a Southern Ocean package developed at the Met Office.
 
 More details to be added here in due course.
 
