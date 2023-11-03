@@ -139,14 +139,14 @@ def cdftransport(data_dir, file, var, **kwargs):
         print(cf_ufil)
     npk = len(cf_ufil.dimensions["depthu"])
     if opt_dic["drake"]:
-        dlu = cf_ufil.variables[u_var][opt_dic["kt"], :, lat_s:lat_e, lon]
-        e3u = cf_ufil.variables["thkcello"][opt_dic["kt"], :, lat_s:lat_e, lon]
+        dlu = cf_ufil.variables[u_var][:, lat_s:lat_e, lon]
+        e3u = cf_ufil.variables["thkcello"][:, lat_s:lat_e, lon]
         npj = np.size(dlu, 1)
     # is the array a masked array, if so, get data.
-    if isinstance(dlu, np.ma.MaskedArray):
-        dlu = np.ma.getdata(dlu)
-    if isinstance(e3u, np.ma.MaskedArray):
-        e3u = np.ma.getdata(e3u)
+    if np.ma.is_masked(dlu):
+        dlu = np.ma.filled(dlu,0) # replacing masked values with zero
+    if np.ma.is_masked(e3u):
+        e3u = np.ma.filled(e3u,0) # replacing masked values with zero
     #  if opt_dic["lheat"]:
     #    cf_tfil = Dataset(data_dir + t_file)
     #    print(cf_tfil)
@@ -166,14 +166,16 @@ def cdftransport(data_dir, file, var, **kwargs):
     #      dlw = np.ma.getdata(dlw)
     cf_ufil.close()
 
+    # print(dlu[npk-1,10])
+
     mask = "mesh_mask.nc"
     cn_mask = Dataset(mask)
     if opt_dic["lprint"]:
         print(cn_mask)
     e2u = cn_mask.variables["e2u"][0, lat_s:lat_e, lon]
     umask = cn_mask.variables["umask"][0, :, lat_s:lat_e, lon]
-    if isinstance(e2u, np.ma.MaskedArray):
-        e2u = np.ma.getdata(e2u)
+    if np.ma.is_masked(umask):
+        umask = np.ma.filled(umask,0) # replacing masked values with zero
     gdepw = cn_mask.variables["gdepw_1d"][0, :]
     #  if opt_dic["lvert"]:
     #    e1t     = cn_mask.variables["e1t"][0, lat_s:lat_e, lon]
@@ -211,6 +213,9 @@ def cdftransport(data_dir, file, var, **kwargs):
             for jj in range(npj):
                 dwku[jk, jj] = dlu[jk, jj] * e2u[jj] * e3u[jk, jj] * umask[jk, jj]
                 dtrpu[jj] = dtrpu[jj] + dwku[jk, jj]
+    # print(dwku[10,10])
+    # print(umask[10,10])
+    # print(dtrpu[10])
     #        if opt_dic["lheat"]:
     #          dwkwt[jk, jj, ji] = dlwt[jk, jj, ji] * e1t[jj, ji] * e2t[jj, ji]
 
