@@ -10,42 +10,57 @@ import os
 import glob
 import netCDF4 as nc
 import numpy as np
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from cftime import date2num, num2date
 from pyCDFTOOLS.cdftransport import cdftransport
 
-# def write_to_netcdf(filename, time, data, variable_name, units):
-#     """
-#     Write data to a NetCDF file
+def write_to_netcdf(filename, time, data, variable_name, units):
+    """
+    Write data to a NetCDF file.
 
-#     Inputs:
+    Inputs: 
+        - filename
+        - time (in units of "hours since 1800-01-01")
+        - data
+        - variable name and its units
+
+    Outputs:
+        - netcdf file of transport for chosen experiment
         
-#     """
-#     with nc.Dataset(filename, 'w', format='NETCDF4') as dataset:
-#         # Create a dimension for time
-#         dataset.createDimension('time', len(time))
-        
-#         # Create a variable for time
-#         time_var = dataset.createVariable('time', 'f8', ('time',))
-#         time_var.units = 'seconds since 1970-01-01 00:00:00'
-#         time_var[:] = time
-        
-#         # Create a variable for the time series data
-#         data_var = dataset.createVariable(variable_name, 'f4', ('time',))
-#         data_var.units = units
-#         data_var[:] = data
+    """
+    try:
+        with nc.Dataset(filename, 'w', format='NETCDF4') as dataset:
+            # Create a dimension for time
+            dataset.createDimension('time', len(time))
+            
+            # Create a variable for time
+            time_var = dataset.createVariable('time', 'f8', ('time',))
+            time_var.units = "hours since 1800-01-01"
+            time_var[:] = time
+            
+            # Create a variable for the time series data
+            data_var = dataset.createVariable(variable_name, 'f4', ('time',))
+            data_var.units = units
+            data_var[:] = data
+
+    except Exception as e:
+        return f'Error: {str(e)}'
+
     
 
 # search directory for cdfmoy filenames
 # directory
 user_path = "/gws/nopw/j04/terrafirma/twilder/"
-data_directory = "u-cz312/data/"
+data_directory = "u-da643/data/"
 
 # model and grid specifics
 # year = "1977"
-exp = "cz312o_"
+exp = "da643o"
 grid = "_grid-U"
 
 # search all years
-search_pattern = r"cdfmoy_" + exp + "*" + grid + ".nc"
+search_pattern = r"cdfmoy_" + exp + "_*" + grid + ".nc"
 matching_files_path = glob.glob(os.path.join(user_path + data_directory, search_pattern))
 
 matching_files = []    
@@ -64,13 +79,29 @@ var_name = "uo"
 kwargs = {"kt": 0, "lprint": False, "drake": True}
 
 transport = np.zeros(len(matching_files))
+# transport = np.zeros(3)
+# for i in range(3):
 for i in range(len(matching_files)):
     transport[i] = cdftransport(user_path + data_directory, matching_files[i], var_name, **kwargs)
 print(transport)
 
-# # save to netcdf file
-# dates = [datetime(1976,2,1) + n*relativedelta(months=+1) for n in range(len(files))]
-# times[:] = date2num(dates,"hours since 1800-01-01")
+# save to netcdf file
+
+# set up date coordinates
+dates = [datetime(1977,6,1) + n*relativedelta(years=+1) for n in range(len(matching_files))]
+# dates = [datetime(1977,6,1) + n*relativedelta(years=+1) for n in range(3)]
+time = date2num(dates,"hours since 1800-01-01")
+print(dates)
+print(date2num(dates,"hours since 1800-01-01"))     
+
+
+write_to_netcdf("transport_" + exp + ".nc", time, transport, "acc_transport", "Sv")
+
+
+
+
+
+
 
 
 
