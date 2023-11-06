@@ -10,47 +10,57 @@ import re
 import os
 import glob
 from pyCDFTOOLS.cdfmoy import cdfmoy
+import logging
 
-# directory
-user_path = "/gws/nopw/j04/terrafirma/twilder/"
-data_directory = "u-cz312/data/"
+logging.basicConfig(filename='output.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# model and grid specifics
-exp = "cz312o"
-grid = "U"
+# Create a logger
+logger = logging.getLogger('my_logger')
 
-# list of years to compute
-years = [str(year) for year in range(1977,1983)]
-print(years)
+try:
 
-# loop through each year
-for year in years:
-    print(f'starting year {year}')
-    # search for files with a specified year in e.g. 1985 and assign them to list
-    # year = "1980"
-    search_pattern = r"nemo_" + exp + "_1m_" + year + "*" + grid + ".nc"
+    # directory
+    user_path = "/gws/nopw/j04/terrafirma/twilder/"
+    data_directory = "u-cy516/data/"
     
-    matching_files_path = glob.glob(os.path.join(user_path + data_directory, search_pattern))
+    # model and grid specifics
+    exp = "cy516o"
+    grid = "U"
     
-    matching_files = []
-    for file_path in matching_files_path:
-        filename = os.path.basename(file_path)
-        matching_files.append(filename)
-        print(filename)
+    # list of years to compute
+    years = [str(year) for year in range(1990,1995)]
+    print(years)
     
-    print(matching_files)
+    # loop through each year
+    for year in years:
+        logging.info(f'starting year {year}')
+        # search for files with a specified year in e.g. 1985 and assign them to list
+        # year = "1980"
+        search_pattern = r"nemo_" + exp + "_1m_" + year + "*" + grid + ".nc"
         
-    # create filename cdfmoy_exp_year_grid-*
-    cdfmoy_filename = "cdfmoy_" + exp + "_" + year + "_grid-" + grid 
-    
-    print(cdfmoy_filename)
+        matching_files_path = glob.glob(os.path.join(user_path + data_directory, search_pattern))
         
-    # compute mean using file list and new filename
-    var_name = ["uo", "thkcello"]
-    kwargs = {"lprint": False, "grid": "U"}
-    output = cdfmoy(user_path + data_directory, matching_files, var_name, cdfmoy_filename, **kwargs)
-    
-
+        matching_files = []
+        for file_path in matching_files_path:
+            filename = os.path.basename(file_path)
+            matching_files.append(filename)
+            print(filename)
+        
+        print(matching_files)
+            
+        # create filename cdfmoy_exp_year_grid-*
+        cdfmoy_filename = "cdfmoy_" + exp + "_" + year + "_grid-" + grid 
+        logging.info(f'cdfmoy_filename is: {cdfmoy_filename}')
+        
+        print(cdfmoy_filename)
+            
+        # compute mean using file list and new filename
+        var_name = ["uo", "thkcello"]
+        kwargs = {"lprint": False, "grid": "U"}
+        output = cdfmoy(user_path + data_directory, matching_files, var_name, cdfmoy_filename, **kwargs)
+            
+except Exception as e:
+    print("Error: " + str(e))
 
 
 
