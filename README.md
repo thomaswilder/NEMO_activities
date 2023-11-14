@@ -27,6 +27,8 @@ The Leith schemes are being tested in realistic forced ocean sea-ice configurati
 
 Similarly to `/IDEAL`, we employ `pyCDFTOOLS` with minor modifications made. We hope to bring both versions together so they are cross compatible, and can be used with any configuration. Scripts are also being generated to analyse the data e.g. `calc_cdfmoy.py`.
 
+A module called `nemo_toolkit`, with `data_view.py` to easily load and plot nemo data. Still under development but plotting capabilities already include map projections, transects, and time series. 
+
 Modifications relating to QG Leith in orca025 are also made to:
 
 - `ldftra.F90` which also includes a Southern Ocean package developed at the Met Office.
