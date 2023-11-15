@@ -27,6 +27,8 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
 
     """
     Some description ...
+
+    n.b. cdfmoy relates to netcdf output from CDFTOOLS/cdfmoy, not pyCDFTOOLS/cdfmoy.
     """
     
     # some defaults for optional keyword arguments
@@ -172,7 +174,7 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
 
     # begin calculation
     if opt_dic["eke"]:
-        eke = np.zeros((npk, npjglo, npiglo))
+        eke = np.zeros((1, npk, npjglo, npiglo))
         for jk in range(npk):
             for jj in range(1, npjglo):
                 for ji in range(1, npiglo):
@@ -183,10 +185,10 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
                         (v2[jk, jj, ji] - vc[jk, jj, ji] * vc[jk, jj, ji])
                         + (v2[jk, jj, ji - 1] - vc[jk, jj, ji - 1] * vc[jk, jj, ji - 1])
                     ))
-                    eke[jk,jj,ji] = value
+                    eke[0,jk,jj,ji] = value
 
     if opt_dic["mke"]:
-        rmke = np.zeros((npk, npjglo, npiglo))
+        rmke = np.zeros((1, npk, npjglo, npiglo))
         for jk in range(npk):
             for jj in range(1, npjglo):
                 for ji in range(1, npiglo):
@@ -202,7 +204,7 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
                             + vc[jk, jj - 1, ji] * vc[jk, jj - 1, ji]
                         )
                     )
-                    rmke[jk,jj,ji] = value
+                    rmke[0,jk,jj,ji] = value
                     
     print(data_dir + new_filename + ".nc")              
 
@@ -210,15 +212,16 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
     netcdf_file = Dataset(data_dir + new_filename + ".nc", "w")
 
     # Create dimensions for the netCDF file.
+    netcdf_file.createDimension("time_counter", 1)
     netcdf_file.createDimension("deptht", npk)
     netcdf_file.createDimension("y", npjglo)
     netcdf_file.createDimension("x", npiglo)
 
     # Create variables for the netCDF file.
     if opt_dic["eke"]:
-        eke_variable = netcdf_file.createVariable("eke", "f4", ("deptht", "y", "x"))
+        eke_variable = netcdf_file.createVariable("eke", "f4", ("time_counter", "deptht", "y", "x"))
     if opt_dic["mke"]:
-        rmke_variable = netcdf_file.createVariable("rmke", "f4", ("deptht", "y", "x"))
+        rmke_variable = netcdf_file.createVariable("rmke", "f4", ("time_counter", "deptht", "y", "x"))
     nav_lat_variable = netcdf_file.createVariable("nav_lat", "f4", ("y", "x"))
     nav_lon_variable = netcdf_file.createVariable("nav_lon", "f4", ("y", "x"))
     deptht = netcdf_file.createVariable("deptht", "f4", ("deptht"))
