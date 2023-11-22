@@ -170,6 +170,46 @@ class MapsVisualiser:
 
         return subset_data
 
+    def create_iris_cube(self, data_in, depth, lat, lon, data_name, unit):
+        """
+        Creates an Iris cube from input data with specified dimensions.
+    
+        Parameters:
+        - data_in (numpy.ndarray): Input data for the cube.
+        - depth (numpy.ndarray): Vertical levels for the cube (e.g., depth in meters).
+        - lat (numpy.ndarray): Latitude values for the cube in degrees North.
+        - lon (numpy.ndarray): Longitude values for the cube in degrees East.
+        - data_name (str): Long name for the data, used as the cube's long_name attribute.
+        - unit (str): Units for the data, used as the cube's units attribute.
+    
+        Returns:
+        iris.cube.Cube: An Iris cube.
+    
+        Example:
+        >>> data = np.random.rand(10, 5, 5)  # Replace with actual data
+        >>> depth_levels = np.linspace(0, 100, 10) or None if surface variable.
+        >>> latitudes = np.linspace(-90, 90, 5)
+        >>> longitudes = np.linspace(-180, 180, 5)
+        >>> cube = create_iris_cube(data, depth_levels, latitudes, longitudes, 'Temperature', 'K')
+        """
+
+
+        # Create a cube
+        cube = iris.cube.Cube(data_in, long_name=data_name, units=unit)
+
+        if depth is not None:
+            # Add dimension coordinates
+            vertical_levels_coord = iris.coords.DimCoord(depth, standard_name='depth', units='m')
+            cube.add_dim_coord(vertical_levels_coord, 0)
+        
+        # Add auxiliary coordinates
+        latitude_coord = iris.coords.AuxCoord(lat, standard_name='latitude', units='degrees_north')
+        longitude_coord = iris.coords.AuxCoord(lon, standard_name='longitude', units='degrees_east')
+        cube.add_aux_coord(latitude_coord, (1, 2))
+        cube.add_aux_coord(longitude_coord, (1, 2))
+
+        return cube
+
     def load_netcdf_data(self, file_path, variable_name):
         '''
         Loads data from a NetCDF file.
@@ -203,12 +243,13 @@ class MapsVisualiser:
         # logging.info("data transformed into projection")
         return new_data
 
-    def plot_map_iris_data(self, data, title, levels, cmap_name, extend, row, col):
+    def plot_map_iris_data(self, data, units, title, levels, cmap_name, extend, row, col):
         '''
         Plots Iris data on a map, either as a single figure, or in a subplot.
 
         Parameters:
             data (iris cube): Iris data to plot.
+            units (str): units of data to be plotted.
             title (str): Title for the plot.
             levels (list or array): Contour levels for the plot.
             cmap_name (str): Name of the colormap.
@@ -240,6 +281,7 @@ class MapsVisualiser:
         cf = iplt.contourf(data, levels=levels, cmap=cmap_name, extend=extend)
         # colorbar
         cb = plt.colorbar(cf, ax=self.ax_maps[row, col], shrink=0.75)
+        cb.ax.set_title(f"{units}")
 
         plt.show()
     
