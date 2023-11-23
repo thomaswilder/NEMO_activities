@@ -37,7 +37,7 @@ def cdfzonalmean(data_dir, file, mesh_mask, var, **kwargs):
         lprint   = print out variable names in netcdf file
         kt       = index of timestep to evaluate
         C-point  = choose which point variable lies on c-grid e.g. U| V| T| W| F
-        basin    = {"southern_ocean"}
+        basin    = {"glo", "so"} - glo = global, so = southern ocean
         o        = output filename, default set to zonal_mean.nc
 
     Returns:
@@ -53,7 +53,7 @@ def cdfzonalmean(data_dir, file, mesh_mask, var, **kwargs):
     opt_dic = {'kt'      : 0,
                'lprint'  : False,
                'C-point' : 'T',
-               'basin'   : 'southern_ocean',
+               'basin'   : 'glo',
                'o'       : 'zonal_mean.nc'} 
 
     # overwrite the options by cycling through the input dictionary
@@ -64,16 +64,18 @@ def cdfzonalmean(data_dir, file, mesh_mask, var, **kwargs):
     with nc.Dataset(mesh_mask, 'r') as cn_mask:
         if opt_dic["lprint"]:
             print(cn_mask)
-        if opt_dic["basin"]=="southern_ocean":
+        if opt_dic["basin"]=="so":
             if opt_dic['C-point'] == 'T':
                 e1t   = cn_mask.variables["e1t"][0, 159:549, :]
-                # print(e1t)
                 e2t   = cn_mask.variables["e2t"][0, 159:549, :]
-                # print(e2t)
                 zmask = cn_mask.variables["tmask"][0, :, 159:549, :]
-                # print(tmask)
-            nav_lat = cn_mask.variables['nav_lat'][159:549,0]
-            # print(nav_lat)
+            nav_lat = cn_mask.variables['nav_lat'][159:549,400]
+        elif opt_dic["basin"]=="glo":
+            if opt_dic['C-point'] == 'T':
+                e1t   = cn_mask.variables["e1t"][0, 159:1000, :]
+                e2t   = cn_mask.variables["e2t"][0, 159:1000, :]
+                zmask = cn_mask.variables["tmask"][0, :, 159:1000, :]
+            nav_lat = cn_mask.variables['nav_lat'][159:1000,400]
         else:
             raise Exception("no basin chosen for zonal averaging")
     
@@ -82,20 +84,25 @@ def cdfzonalmean(data_dir, file, mesh_mask, var, **kwargs):
         if opt_dic["lprint"]:
             print(cf_tfil)
         npi  = len(cf_tfil.dimensions["x"])
-        if opt_dic["basin"]=="southern_ocean":
+        if opt_dic["basin"]=="so":
             npj  = len(range(159,549))
+        elif opt_dic["basin"]=="glo":
+            npj  = len(range(159,1000))
             # print(npj)
         else:
             raise Exception("no basin chosen for zonal averaging")
         npk     = len(cf_tfil.dimensions["deptht"])
         npt     = len(cf_tfil.dimensions["time_counter"])
-        if opt_dic["basin"]=="southern_ocean":
+        if opt_dic["basin"]=="so":
             zv      = cf_tfil.variables[var][opt_dic["kt"],:,159:549,:]
+        elif opt_dic["basin"]=="glo":
+            zv      = cf_tfil.variables[var][opt_dic["kt"],:,159:1000,:]
         # replace masked values with zero
         if np.ma.is_masked(zv):
             zv = np.ma.filled(zv,0)
             # print(zv)
-        depth = cf_tfil.variables['deptht'][:]
+        if opt_dic['C-point'] == 'T':
+            depth = cf_tfil.variables['deptht'][:]
 
     # area of cell
     if opt_dic['C-point'] == 'T':
@@ -140,7 +147,7 @@ def cdfzonalmean(data_dir, file, mesh_mask, var, **kwargs):
         nav_lat_variable[:] = nav_lat
         
         # Create a variable for the data
-        data_var = dataset.createVariable(f"zo_{var}_so", 'f4', ("time_counter", "depth", "y", "x"))
+        data_var = dataset.createVariable(f"zo_{var}_{opt_dic['basin']}", 'f4', ("time_counter", "depth", "y", "x"))
         data_var.units = "n/a"
         data_var[:] = zo
     
