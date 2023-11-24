@@ -23,17 +23,43 @@ from netCDF4 import Dataset
 import numpy as np
 
 
-def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
+def cdfeke(data_dir, filenames, var_names, mesh_mask, **kwargs):
 
-    """
-    Some description ...
+    '''
+    Computes:
+        1) eddy and mean kinetic energy
 
-    n.b. cdfmoy relates to netcdf output from CDFTOOLS/cdfmoy, not pyCDFTOOLS/cdfmoy.
-    """
+    Needs associated mesh_mask.nc file in working directory.
+
+    Inputs:
+        data_dir   = string for data directory
+        filenames  = string for file e.g. U| V| T| W| F
+        var_names  = string for variable name
+        mesh_mask  = string for mesh mask filename
+
+    Optional arguments:
+        lprint   = print out variable names in netcdf file
+        kt       = index of timestep to evaluate
+        eke/mke  = choose whether to calculate eke or mke
+        cdfmoy   = if True, each variable has their own file
+        o        = output filename, default set to eke.nc
+
+    Returns:
+        a netcdf file with eke/mke
+
+    History:
+        2023      Initial inception
+        Nov 23'   Added default output filename
+    '''
+
     
     # some defaults for optional keyword arguments
-    opt_dic = {"kt": 0, "lprint": False, "eke": True, "mke": False,
-               "cdfmoy": True}
+    opt_dic = {"kt": 0, 
+               "lprint": False, 
+               "eke": True, 
+               "mke": False,
+               "cdfmoy": False,
+               "o"     : "eke.nc"}
 
     # overwrite the options by cycling through the input dictionary
     for key in kwargs:
@@ -72,15 +98,10 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
     else:
         raise ValueError("Error: input files should be type cdfmoy or nemo output.")
 
-    # import masks from mesh_mask.nc file
-    mask = "mesh_mask.nc"
-    cn_mask = Dataset(mask)
+    # import masks from mesh_mask file
+    cn_mask = Dataset(mesh_mask)
     umask = cn_mask.variables["umask"][0, :, :, :]
-    if isinstance(umask, np.ma.MaskedArray):
-        umask = np.ma.getdata(umask)
     vmask = cn_mask.variables["vmask"][0, :, :, :]
-    if isinstance(vmask, np.ma.MaskedArray):
-        vmask = np.ma.getdata(vmask)
     cn_mask.close()
 
     if opt_dic["cdfmoy"]:
@@ -93,11 +114,11 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
         npk = len(cf_ufil.dimensions["depthu"])
         nav_lon = cf_ufil.variables["nav_lon"][:, :]
         nav_lat = cf_ufil.variables["nav_lat"][:, :]
-        uc = cf_ufil.variables[u_var][0,:, :, :]
+        uc = cf_ufil.variables[u_var][opt_dic["kt"],:, :, :]
         depthu = cf_ufil.variables["depthu"][:]
-        # is the array a masked array, if so, get data.
-        if isinstance(uc, np.ma.MaskedArray):
-            uc = np.ma.getdata(uc)
+        # replace masked values with zero
+        if np.ma.is_masked(uc):
+            uc = np.ma.filled(uc,0)
         npjglo = np.size(uc, 1)
         npiglo = np.size(uc, 2)
         cf_ufil.close()
@@ -105,28 +126,28 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
         cf_u2fil = Dataset(data_dir + u2_file)
         if opt_dic["lprint"]:
             print(cf_u2fil)
-        u2 = cf_u2fil.variables[u2_var][0,:, :, :]
-        # is the array a masked array, if so, get data.
-        if isinstance(u2, np.ma.MaskedArray):
-            u2 = np.ma.getdata(u2)
+        u2 = cf_u2fil.variables[u2_var][opt_dic["kt"],:, :, :]
+        # replace masked values with zero
+        if np.ma.is_masked(u2):
+            u2 = np.ma.filled(u2,0)
         cf_u2fil.close()
         
         cf_vfil = Dataset(data_dir + v_file)
         if opt_dic["lprint"]:
             print(cf_vfil)
-        vc = cf_vfil.variables[v_var][0,:, :, :]
-        # is the array a masked array, if so, get data.
-        if isinstance(vc, np.ma.MaskedArray):
-            vc = np.ma.getdata(vc)
+        vc = cf_vfil.variables[v_var][opt_dic["kt"],:, :, :]
+        # replace masked values with zero
+        if np.ma.is_masked(vc):
+            vc = np.ma.filled(vc,0)
         cf_vfil.close()
         
         cf_v2fil = Dataset(data_dir + v2_file)
         if opt_dic["lprint"]:
             print(cf_v2fil)
-        v2 = cf_v2fil.variables[v2_var][0,:, :, :]
-        # is the array a masked array, if so, get data.
-        if isinstance(v2, np.ma.MaskedArray):
-            v2 = np.ma.getdata(v2)
+        v2 = cf_v2fil.variables[v2_var][opt_dic["kt"],:, :, :]
+        # replace masked values with zero
+        if np.ma.is_masked(v2):
+            v2 = np.ma.filled(v2,0)
         cf_v2fil.close()
         
     else:
@@ -139,15 +160,16 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
         npk = len(cf_ufil.dimensions["depthu"])
         nav_lon = cf_ufil.variables["nav_lon"][:, :]
         nav_lat = cf_ufil.variables["nav_lat"][:, :]
-        uc = cf_ufil.variables[u_var][0,:, :, :]
+        uc = cf_ufil.variables[u_var][opt_dic["kt"],:, :, :]
+        # replace masked values with zero        
+        if np.ma.is_masked(uc):
+            uc = np.ma.filled(uc,0)
         if opt_dic["eke"]:
-            u2 =cf_ufil.variables[u2_var][0,:,:,:]
-            if isinstance(u2, np.ma.MaskedArray):
-                u2 = np.ma.getdata(u2)
+            u2 =cf_ufil.variables[u2_var][opt_dic["kt"],:,:,:]
+            # replace masked values with zero
+            if np.ma.is_masked(u2):
+                u2 = np.ma.filled(u2,0)
         depthu = cf_ufil.variables["depthu"][:]
-        # is the array a masked array, if so, get data.
-        if isinstance(uc, np.ma.MaskedArray):
-            uc = np.ma.getdata(uc)
         npjglo = np.size(uc, 1)
         npiglo = np.size(uc, 2)
         cf_ufil.close()
@@ -155,21 +177,22 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
         cf_vfil = Dataset(data_dir + v_file)
         if opt_dic["lprint"]:
             print(cf_vfil)
-        vc = cf_vfil.variables[v_var][0,:, :, :]
+        vc = cf_vfil.variables[v_var][opt_dic["kt"],:, :, :]
+        # replace masked values with zero
+        if np.ma.is_masked(vc):
+            vc = np.ma.filled(vc,0)
         if opt_dic["eke"]:
-            v2 =cf_vfil.variables[v2_var][0,:,:,:]
-            if isinstance(v2, np.ma.MaskedArray):
-                v2 = np.ma.getdata(v2)
-        # is the array a masked array, if so, get data.
-        if isinstance(vc, np.ma.MaskedArray):
-            vc = np.ma.getdata(vc)
+            v2 =cf_vfil.variables[v2_var][opt_dic["kt"],:,:,:]
+            # replace masked values with zero
+            if np.ma.is_masked(v2):
+                v2 = np.ma.filled(v2,0)
         cf_vfil.close()
         
-    # mask the data
-    uc = uc * umask
-    vc = vc * vmask
-    u2 = u2 * umask
-    v2 = v2 * vmask
+    # # mask the data
+    # uc = uc * umask
+    # vc = vc * vmask
+    # u2 = u2 * umask
+    # v2 = v2 * vmask
         
 
     # begin calculation
@@ -183,9 +206,10 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
                         + (u2[jk, jj, ji - 1] - uc[jk, jj, ji - 1] * uc[jk, jj, ji - 1])
                     ) + 0.5 * (
                         (v2[jk, jj, ji] - vc[jk, jj, ji] * vc[jk, jj, ji])
-                        + (v2[jk, jj, ji - 1] - vc[jk, jj, ji - 1] * vc[jk, jj, ji - 1])
+                        + (v2[jk, jj - 1, ji] - vc[jk, jj - 1, ji] * vc[jk, jj - 1, ji])
                     ))
                     eke[0,jk,jj,ji] = value
+
 
     if opt_dic["mke"]:
         rmke = np.zeros((1, npk, npjglo, npiglo))
@@ -206,10 +230,10 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
                     )
                     rmke[0,jk,jj,ji] = value
                     
-    print(data_dir + new_filename + ".nc")              
+    print(data_dir + opt_dic["o"])              
 
     # create netcdf file
-    netcdf_file = Dataset(data_dir + new_filename + ".nc", "w")
+    netcdf_file = Dataset(data_dir + opt_dic["o"], "w")
 
     # Create dimensions for the netCDF file.
     netcdf_file.createDimension("time_counter", 1)
@@ -233,7 +257,7 @@ def cdfeke(data_dir, filenames, var_names, new_filename, **kwargs):
         rmke_variable[:] = rmke
     nav_lat_variable[:] = nav_lat
     nav_lon_variable[:] = nav_lon
-    deptht[:] = depthu
+    deptht[:] = depthu # U and T depth levels are the same.
 
     # Close the netCDF file.
     netcdf_file.close()
