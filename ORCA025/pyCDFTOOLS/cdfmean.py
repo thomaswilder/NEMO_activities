@@ -24,20 +24,19 @@ import numpy as np
 import netCDF4 as nc
 import os
 
-def cdfmean(data_dir, file, var, **kwargs):
+def cdfmean(data_dir, file, var, mesh_mask, **kwargs):
 
     """
     Computes:
         1) the horizontal average of an input field for all vertical levels,
-
-    Needs associated mesh_mask.nc file in the same data folder.
     
     n.b. the input field has 3 dimensions: depth, x, y. 
 
     Inputs:
-        data_dir = string for data directory
-        file     = string for file e.g. U| V| T| W| F
-        var      = string for variable name
+        data_dir  = string for data directory
+        file      = string for file e.g. U| V| T| W| F
+        var       = string for variable name
+        mesh_mask = string for mesh mask filename
 
     Optional arguments:
         lprint   = print out variable names in netcdf file
@@ -78,7 +77,7 @@ def cdfmean(data_dir, file, var, **kwargs):
             dlt     = cf_tfil.variables[var][opt_dic["kt"], :, 159:549, :]
             print(dlt.shape)
         else:
-            raise Exception("neither global or souther_ocean basin has been chosen")
+            raise Exception("neither global or southern_ocean basin has been chosen")
         deptht  = cf_tfil.variables["deptht"][:]
         cf_tfil.close()
         # is the array a masked array, if so, get data.
@@ -87,17 +86,16 @@ def cdfmean(data_dir, file, var, **kwargs):
     else:
         raise Exception("You must choose a valid C-point for your input file... Or U|V|F need adding.")
 
-    mask = 'mesh_mask.nc'
-    cn_mask = Dataset(mask)
+    cn_mask = Dataset(mesh_mask)
     if opt_dic['C-point'] == 'T':
         if opt_dic["basin"]=="global":
             e1t   = cn_mask.variables["e1t"][0, :, :]
             e2t   = cn_mask.variables["e2t"][0, :, :]
-            tmask = cn_mask.variables["tmask"][opt_dic["kt"], :, :, :]
+            tmask = cn_mask.variables["tmask"][0, :, :, :]
         elif opt_dic["basin"]=="southern_ocean":
             e1t   = cn_mask.variables["e1t"][0, 159:549, :]
             e2t   = cn_mask.variables["e2t"][0, 159:549, :]
-            tmask = cn_mask.variables["tmask"][opt_dic["kt"], :, 159:549, :]
+            tmask = cn_mask.variables["tmask"][0, :, 159:549, :]
             print(e1t.shape)
             print(e2t.shape)
             print(tmask.shape)
@@ -124,7 +122,7 @@ def cdfmean(data_dir, file, var, **kwargs):
     
     # write data to netcdf file
     base_name, extension = os.path.splitext(file)
-    with nc.Dataset(data_dir + base_name + "_horizontal_average.nc", 'w', format='NETCDF4') as dataset:
+    with nc.Dataset(data_dir + base_name + "_horizontal_average_" + var + ".nc", 'w', format='NETCDF4') as dataset:
         # Create a dimension for time
         dataset.createDimension('deptht', len(deptht))
         
