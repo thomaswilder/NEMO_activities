@@ -178,10 +178,10 @@ def cdftransport(data_dir, file, var, mesh_mask, **kwargs):
     if opt_dic["lprint"]:
         print(cn_mask)
     e2u = cn_mask.variables["e2u"][0, lat_s:lat_e, lon]
-    umask = cn_mask.variables["umask"][opt_dic["kt"], :, lat_s:lat_e, lon]
+    umask = cn_mask.variables["umask"][0, :, lat_s:lat_e, lon]
     if np.ma.is_masked(umask):
         umask = np.ma.filled(umask,0) # replacing masked values with zero
-    gdepw = cn_mask.variables["gdepw_1d"][0, :]
+    gdepw = cn_mask.variables["gdepw_0"][0, :]
     #  if opt_dic["lvert"]:
     #    e1t     = cn_mask.variables["e1t"][0, lat_s:lat_e, lon]
     #    e2t     = cn_mask.variables["e2t"][0, lat_s:lat_e, lon]
