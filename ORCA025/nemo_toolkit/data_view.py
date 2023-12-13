@@ -56,7 +56,7 @@ class TimeSeriesVisualiser:
             data = ds.variables[variable_name][:]
         return data
 
-    def plot_time_series(self, time, data_series, labels, title, y_label):
+    def plot_time_series(self, time, data_series, labels, title, y_label, colors, ls):
         '''
         Plots time series data.
 
@@ -66,14 +66,16 @@ class TimeSeriesVisualiser:
             labels (list of str): List of labels for the legend.
             title (str): Title for the plot.
             y_label (str): Label for the y-axis.
+            color (str): Desired colour for the data
+            ls (str): matplotlib linestyles in ls format
         '''
-        for data in data_series:
-            self.ax.plot(time, data)
+        for data, color, linestyle in zip(data_series, colors, ls):
+            self.ax.plot(time, data, color, linestyle=linestyle)
         self.ax.set_title(title)
         self.ax.set_xlabel("Time")
         self.ax.set_ylabel(y_label)
         self.ax.grid(True)
-        self.ax.legend(labels) 
+        self.ax.legend(labels, loc='center left', bbox_to_anchor=(1, 0.5)) 
         plt.show()
 
 class MapsVisualiser:
@@ -287,7 +289,7 @@ class MapsVisualiser:
     
         return self.fig_maps
 
-    def plot_transect_data(self, xpoints, depth, data, title, levels, 
+    def plot_transect_data(self, xpoints, depth, data, units, title, levels, 
                                cmap_name, extend, row, col):
         '''
         Plots transect data.
@@ -307,7 +309,8 @@ class MapsVisualiser:
         cf = self.ax_transect[row,col].contourf(xpoints, depth, data, 
                                        levels=levels, cmap=cmap_name, extend=extend)
         # colorbar
-        cb = plt.colorbar(cf, ax=self.ax_transect[row, col], shrink=0.75)
+        cb = plt.colorbar(cf, ax=self.ax_transect[row, col], shrink=0.9)
+        cb.ax.set_title(f"{units}")
 
         # Flip the y-axis
         self.ax_transect[row, col].invert_yaxis()
