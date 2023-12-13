@@ -63,7 +63,7 @@ os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 logging.basicConfig(filename="output.log", level=logging.ERROR)
 
 
-def cdftransport(data_dir, file, var, **kwargs):
+def cdftransport(data_dir, file, var, mesh_mask, **kwargs):
     """
     Computes:
     1) the zonal transport of a section by supplying a U-file and u-var, and keyword argument,
@@ -72,9 +72,10 @@ def cdftransport(data_dir, file, var, **kwargs):
     Needs associated mesh_mask.nc file in the same data folder
 
     Inputs:
-      data_dir = string for data directory
-      file   = string for file with u in or a list of files [U, T, W]
-      var    = string for u variable name or a list of variables [u, t, w]
+      data_dir  = string for data directory
+      file      = string for file with u in or a list of files [U, T, W]
+      var       = string for u variable name or a list of variables [u, t, w]
+      mesh_mask = string for mesh mask filename
 
     Optional arguments:
       lprint   = True   print out variable names in netcdf file
@@ -84,7 +85,8 @@ def cdftransport(data_dir, file, var, **kwargs):
       drake    = Compute transport in Drake passage region
 
     Returns:
-      total zonal transport, vertical heat transport, depth on T-point => (dvoltrpsum, vht, deptht)
+      total zonal transport, dvoltrpsum. 
+      [ not configured yet to return vertical heat transport, depth on T-point => (vht, deptht)]
 
 
     History:
@@ -119,7 +121,11 @@ def cdftransport(data_dir, file, var, **kwargs):
     rcp = 4000.0  # heat capacity (J/kg/K)
 
     # some defaults for optional keyword arguments
-    opt_dic = {"kt": 0, "lprint": False, "lheat": False, "lvert": False, "drake": False}
+    opt_dic = {"kt": 0, 
+               "lprint": False, 
+               "lheat": False, 
+               "lvert": False, 
+               "drake": False}
 
     # overwrite the options by cycling through the input dictionary
     for key in kwargs:
@@ -139,8 +145,8 @@ def cdftransport(data_dir, file, var, **kwargs):
         print(cf_ufil)
     npk = len(cf_ufil.dimensions["depthu"])
     if opt_dic["drake"]:
-        dlu = cf_ufil.variables[u_var][:, lat_s:lat_e, lon]
-        e3u = cf_ufil.variables["thkcello"][:, lat_s:lat_e, lon]
+        dlu = cf_ufil.variables[u_var][opt_dic["kt"], :, lat_s:lat_e, lon]
+        e3u = cf_ufil.variables["thkcello"][opt_dic["kt"], :, lat_s:lat_e, lon]
         npj = np.size(dlu, 1)
     # is the array a masked array, if so, get data.
     if np.ma.is_masked(dlu):
@@ -168,12 +174,11 @@ def cdftransport(data_dir, file, var, **kwargs):
 
     # print(dlu[npk-1,10])
 
-    mask = "mesh_mask.nc"
-    cn_mask = Dataset(mask)
+    cn_mask = Dataset(mesh_mask)
     if opt_dic["lprint"]:
         print(cn_mask)
     e2u = cn_mask.variables["e2u"][0, lat_s:lat_e, lon]
-    umask = cn_mask.variables["umask"][0, :, lat_s:lat_e, lon]
+    umask = cn_mask.variables["umask"][opt_dic["kt"], :, lat_s:lat_e, lon]
     if np.ma.is_masked(umask):
         umask = np.ma.filled(umask,0) # replacing masked values with zero
     gdepw = cn_mask.variables["gdepw_1d"][0, :]
