@@ -289,7 +289,7 @@ class MapsVisualiser:
     
         return self.fig_maps
 
-    def plot_transect_data(self, xpoints, depth, data, units, title, levels, 
+    def plot_transect_data(self, xpoints, depth, data, units, title, ylabel, levels, 
                                cmap_name, extend, row, col):
         '''
         Plots transect data.
@@ -299,6 +299,7 @@ class MapsVisualiser:
             depth (array-like): Depth values for the transect.
             data (array-like): Data values for the transect.
             title (str): Title for the plot.
+            ylabel (str): Lable for y axis
             levels (list or array): Contour levels for the plot.
             cmap_name (str): Name of the colormap.
             extend (str): Colormap extension (e.g., "max", "both").
@@ -320,7 +321,7 @@ class MapsVisualiser:
 
         # set x and y labels
         self.ax_transect[row, col].set_xlabel("Latitude (deg)")
-        self.ax_transect[row, col].set_ylabel("Depth (m)")
+        self.ax_transect[row, col].set_ylabel(ylabel)
 
                                
         plt.show()
