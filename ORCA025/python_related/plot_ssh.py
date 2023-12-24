@@ -12,6 +12,7 @@ History:
 
 import cmocean
 import numpy as np
+import matplotlib.pyplot as plt
 from nemo_toolkit import data_view
 
 viscosity_used = ["Biharm", "2D Leith", "QG Leith"]
@@ -23,7 +24,7 @@ for experiment, viscosity in zip(exp, viscosity_used):
     # Create an instance of MapsVisualiser
     visualiser = data_view.MapsVisualiser()
     
-    filepath = f"/gws/nopw/j04/terrafirma/twilder/u-{experiment}/data/nemo_{experiment}o_ssh_2007_grid-T.nc"
+    filepath = f"/gws/nopw/j04/terrafirma/twilder/u-{experiment}/data/nemo_{experiment}o_zos_1995-2008_grid-T.nc"
     
     print(visualiser.preview_iris_data(filepath))
     
@@ -39,4 +40,6 @@ for experiment, viscosity in zip(exp, viscosity_used):
     
     # plot data
     levels = np.arange(-2,2.2,0.2)
-    visualiser.plot_map_iris_data(new_variable, f"{variable_name}, {viscosity}_2007", levels, cmocean.cm.balance, "both", f"{variable_name}_u-{experiment}_2007")
+    visualiser.plot_map_iris_data(new_variable, f"{variable_name}, {viscosity}_1995-2008", levels, cmocean.cm.balance, "both", 0, 0) 
+
+    plt.savefig(f"{variable_name}_u-{experiment}_1995-2008.png",dpi=100, bbox_inches='tight')

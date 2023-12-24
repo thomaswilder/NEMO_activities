@@ -592,7 +592,7 @@ CONTAINS
          WRITE(numout,*) '      Eddy Induced Velocity (eiv) param.         ln_ldfeiv     = ', ln_ldfeiv
          WRITE(numout,*) '      eiv streamfunction & velocity diag.        ln_ldfeiv_dia = ', ln_ldfeiv_dia
          WRITE(numout,*) '      coefficients :'
-         WRITE(numout,*) '         type of time-space variation            nn_aei_ijk_t  = ', nn_aht_ijk_t
+         WRITE(numout,*) '         type of time-space variation            nn_aei_ijk_t  = ', nn_aei_ijk_t
          WRITE(numout,*) '         lateral diffusive velocity (if cst)     rn_Ue         = ', rn_Ue, ' m/s'
          WRITE(numout,*) '         lateral diffusive length   (if cst)     rn_Le         = ', rn_Le, ' m'
          WRITE(numout,*)

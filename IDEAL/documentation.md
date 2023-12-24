@@ -349,3 +349,33 @@ Going to try the FCT tracer advection scheme, so `ln_traadv_fct=.true.`, `nn_fct
 
 ### 4/10/23
 Have tried increasing the diffusion on temperature by an order of magnitude to 10^10, but no real change.
+
+
+### 13/10/23
+Looking at some plan views and x-z sections:
+
+- Temp and SSH look fine.
+- Vertical velocity is fine in Biharmonic, but noisy in Leith schemes towards the south of the domain.
+- Similarly, the Leith viscosity fields also display noise to the south, with QG Leith exhibiting the starry night pattern.
+
+Generally, Biharmonic viscosity is required for numerical stability.
+
+
+### 17/10/23
+Vertical velocity field looks noisy in Leith scheme. Could try modifying `ldfdyn.F90` to include two parameters in Leith and QG Leith for vorticity and divergence. Damping the divergence field further would also dampen the vertical motions.
+
+To Do:
+
+- Modify `ldfdyn.F90`,
+- Test IDEAL with enhanced divergence damping in Leith.
+
+Is there any justification for using varying tuning parameters for vorticity and divergence in the Leith schemes due to grid scale noise?
+
+
+### 18/10/23
+
+Using a tuning parameter of 3.0 on divergence in QG Leith results in a viscosity coefficient that overdamps the divergence field and the vorticity patterns in the field are reduced.
+
+However, damping the divergence results in less starry night noise, possible due to weakened vertical motions that induce large horizontal gradients in the density field.
+
+Running a simulation with both tuning parameters set to 1.0 to check if including `rfr2` in `lbc_lnk_multi` leads to reduced noise.

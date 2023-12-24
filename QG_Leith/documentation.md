@@ -412,9 +412,9 @@ Adding in the stability criterion for QG Leith:
 
 
 
-## Leith as GM and Redi
-
 ### 19th September
+We now begin to implement Leith as GM/Redi.
+
 - In NEMO, GM coefficients are computed in `OCE/LDF/ldftra.f90`.
 - There are two coefficient specified, one on each of u- and v- points.
 - This can be achieved by averaging `ahmt` onto each point.
@@ -422,6 +422,33 @@ Adding in the stability criterion for QG Leith:
 - Might need to re-order the calling of `ldfdyn.f90` in `step.f90`, so viscosity coefficient is called first then can be read into `ldftra.f90`.
 
 To incorporate QG Leith, the easiest way may be to add IF conditions into `ldftra` to choose QG Leith when a namelist set TRUE in section `namtra_eiv`?
+
+
+### 20th September
+- When choosing Leith as GM, no need to compute the coefficient in routine `ldf_eiv` since it can be computed in `ldf_tra`. 
+- The coefficients `aei` are assigned in `ldf_tra` anyway.
+
+See commits on GitHub for further implementation details.
+
+NEMO has compiled and IDEAL has run for 1 year with GM/Redi turned on.
+
+
+### 28th September
+Backtracking a little due to the QG Leith starry night sky.
+
+We have attempted a few 'fixes' in `IDEAL`, but to no avail. Instead, we turn our attention to the numerical implementation of the stretching term, since this is where the starry night sky is appearing.
+
+Instead of computing an x and y component of stretching, we compute one value. So following MITgcm implementation.
+
+
+### 29th September
+In an attempt to solve the starry night sky, we have implemented QG Leith in a similar fashion to MITgcm. A single stretching term computed on the T-point and then its gradient taken and averaged onto the vorticity gradient points, before the magnitudes are put onto T-point.
+
+Preliminary output of IDEAL after 1 year from rest is not promising, where single grid point large stretching values are causing large gradients and grid box like viscosity values. 
+
+We wonder if this is less to do with the implementation, perhaps more to do with spin up? Still the same.
+
+Revert back to original `ldfdyn.F90`, try from spin up though.
 
 
 

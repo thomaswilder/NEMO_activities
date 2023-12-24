@@ -484,3 +484,148 @@ But perhaps something to try is to set the max viscous value to satisfy the stab
 #### 2D Leith run at year 7
 - Has a maximum value of 2746 m^2^/s at the surface around the Agulhas region. 
 - Comparing regions of large values with Pearson et al. (2017) appears consistent.
+
+
+### 21st August
+Having modified `ldfdyn.F90` and `step.F90` for before timestep, run `u-cx856` for 3 years at 1800 s timestep.
+- Crashed!
+
+Add a cap on max viscosity using the stability criterion.
+
+
+### 23rd August
+New revision 16329 with viscosity cap on.
+
+
+### 24th August
+Running a 7 year QG Leith simulation in rose suite `u-cz312`. Can compare with Biharm and 2D Leith once completed.
+
+
+### 29th August
+QG Leith simulation `u-cz312` ran successully for 7 years.
+
+Computing the ACC transport at year 7:
+QG Leith `u-cz312` is 142 Sv
+Biharm `u-cy516` is 138 Sv 
+
+
+### 14th September
+Since QG Leith simulations appear to be working, we will run the following configurations for 35 years (forcing period) with monthly diagnostic output:
+- Biharm `u-cy516`
+- 2D Leith `u-cy517`
+- QG Leith `u-cz312`
+
+Made updates to `ldfdyn.F90`. New revision is 16344.
+
+Why am I using `u-cx856` restarts? Should be using `u-cm028` as suggested by Dave Storky. 
+
+
+### 15th September
+All configurations are now running.
+
+Now without the SO package.
+- Ran `fcm commit` on `u-cz312`.
+- Copy `u-cz312` to make a new rose suite `u-cz793`.
+
+Unsure whether rough bathymetry is included in rose suites `u-cz312` ...
+
+
+### 11th October
+Rough bathymetry is not included in any of the rose suites we are running. 
+
+Annoyingly I did not output any stretching diagnostics in the QG Leith run, may need to re-run `u-cz312` to output this. 
+
+Also, `relvor` produced empty fields. Replace `diawri.F90` in rose suites with one from `IDEAL`, which works.
+
+**To Do**:
+
+- Include diags `zstlim`,
+- Replace/fix `diawri.F90`.
+
+
+### 16th October
+- Committed updated `ldfdyn.F90` through `svn commit`. New revision 16362.
+- Committed `diawri.F90` with `relvor` added. New revision 16363.
+
+
+### 17th October
+New rose suites for 2D Leith and QG Leith with most up-to-date `ldfdyn.F90`:
+- `u-da506` - QG Leith
+- `u-da507` - 2D Leith
+
+Running the above rose suites for the full 35 year cycle. Would be nice to have `relvor` diagnostic too. Re-run biharmonic as well. 
+- Run `u-da506` first to see if results and diagnostics are working e.g. `relvor` and `rre`.
+
+Difficulties compiling, have emailed monsoon support.
+
+
+### 18th October 
+New revision 16365, update to `ldfdyn.F90` regarding `rfr2` missing in halo.
+Now 16366 to correct `diawri.F90`
+
+
+### 19th October
+Needed to add `oce.F90`, `step.F90`, and `ldftra.F90`. New revision is 16367. 
+
+Now 16368 with `diawri.F90` fix. Ignore this, revision 16369.
+
+Potentially fixed. Now 16370. Now 16731. Now 16732.
+
+`diawri.F90` compiled on MONSOON after correcting argument that was passed in `ldf_eiv`. Now added `relvor` and revision number is 16373.
+
+Rose suite `u-da506` is now running... no. Error with `namtra_eiv`. New revision 16374. 
+
+Added QG Leith as GM changes to D. Storkeys SO package in `ldftra.F90`. New revision 16375.
+
+
+### 18th October
+`u-da506` is now running. Finally.
+
+2D Leith rose suite now `u-da643`, copied from `u-da506`.
+
+
+### 30th October
+Possible system error since both rose suites and IDEAL crashed at similar times 03:30 on 22nd October!
+
+
+### 31st October
+Rose suites now running... passing 1982.
+
+Creating another rose suite for QG Leith without SO package and no GM. Need to spin this up. 
+- Model spin up for 30 years with CORE2 forcing.
+- Rose suite is `u-da850`.
+
+`u-da850` eventually compiled ocean and drivers after some too and froing...
+- Running a 30 year spin up from 19760101.
+
+```
+STOP
+ice_rst_read: you need ln_ice_ini=T and nn_iceini_file=0 or 1
+```
+
+- Ice restart file is `/projects/jmmp/frcg/hadgem3/initial/ocean/eORCA025/ci818o_19761201_restart_ice.nc`
+
+
+### 14th December
+Can we run the model to 2039 using the CORE2 forcing? Will it recycle the forcing. NO!
+
+
+### 15th December
+The rose suites we are basing our simulations on is the GOSI9p8.0 u-cn082. Much of the earlier development on improving the Southern Ocean took place in (GO8p3)[https://code.metoffice.gov.uk/trac/GO/wiki/GODocumentation/GO8.0/SouthernOcean] and was later introduced in (GO8p7)[https://code.metoffice.gov.uk/trac/GO/attachment/wiki/GODocumentation/GO8.0/GO8Releases/GO8p7.0_release_notes.txt].
+
+See `NEMO_activities/ORCA025/output.txt` for rose suite diff output.
+
+#### Key differences between the configurations
+- NEMO version has increased from 4.0.1 to 4.0.4.
+- `ln_icebergs=false` in GOSI9p8.
+- `teos10` used in GOSI9p8.
+- Increased albedo in GOSI9p8.
+- Reduced tke mixing depth to deepen mixed layer around 40S
+
+
+
+### 18th Dec
+
+Since forcing files do not recycle and correspond to the year of simulation, we set up new rose suites based on previous ones, restarting from 2009 and starting at year 1976 of forcing.
+
+

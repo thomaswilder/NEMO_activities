@@ -21,14 +21,14 @@ try:
 
     # directory
     user_path = "/gws/nopw/j04/terrafirma/twilder/"
-    data_directory = "u-cy516/data/"
+    data_directory = "u-da643/data/"
     
     # model and grid specifics
-    exp = "cy516o"
+    exp = "da643o"
     grid = "U"
     
     # list of years to compute
-    years = [str(year) for year in range(1990,1995)]
+    years = [str(year) for year in range(1977,2010)]
     print(years)
     
     # loop through each year
@@ -56,7 +56,7 @@ try:
             
         # compute mean using file list and new filename
         var_name = ["uo", "thkcello"]
-        kwargs = {"lprint": False, "grid": "U"}
+        kwargs = {"lprint": False, "grid": f"{grid}", "sqd": False}
         output = cdfmoy(user_path + data_directory, matching_files, var_name, cdfmoy_filename, **kwargs)
             
 except Exception as e:

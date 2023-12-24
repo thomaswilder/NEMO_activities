@@ -42,4 +42,4 @@ for i in range(len(time_cftime)):
 
 # making plot
 visualiser.plot_time_series(time, data_series, labels, title, y_label)
-plt.savefig('acc_transport_test_test.png',dpi=100, bbox_inches='tight')
+plt.savefig('acc_transport_test.png',dpi=100, bbox_inches='tight')

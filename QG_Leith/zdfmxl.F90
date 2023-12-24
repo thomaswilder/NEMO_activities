@@ -7,7 +7,6 @@ MODULE zdfmxl
    !!            3.2  ! 2009-07  (S. Masson, G. Madec)  IOM + merge of DO-loop
    !!            3.7  ! 2012-03  (G. Madec)  make public the density criteria for trdmxl 
    !!             -   ! 2014-02  (F. Roquet)  mixed layer depth calculated using N2 instead of rhop 
-   !!   
    !!----------------------------------------------------------------------
    !!   zdf_mxl      : Compute the turbocline and mixed layer depths.
    !!----------------------------------------------------------------------
@@ -28,15 +27,12 @@ MODULE zdfmxl
    PUBLIC   zdf_mxl   ! called by zdfphy.F90
 
    INTEGER , PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   nmln    !: number of level in the mixed layer (used by LDF, ZDF, TRD, TOP)
-   INTEGER , PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   nmlnqg  !: number of level in the mixed layer QG Leith (used by LDF, ZDF, TRD, TOP)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmld    !: mixing layer depth (turbocline)       [m]   (used by TOP)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmlp    !: mixed layer depth  (rho=rho0+zdcrit)  [m]   (used by LDF)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmlpqg  !: mixed layer depth  (rho=rho0+zdcrit3) [m]   (used by LDF)
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmld    !: mixing layer depth (turbocline)      [m]   (used by TOP)
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmlp    !: mixed layer depth  (rho=rho0+zdcrit) [m]   (used by LDF)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:) ::   hmlpt   !: depth of the last T-point inside the mixed layer [m] (used by LDF)
 
-   REAL(wp), PUBLIC ::   rho_c   = 0.01_wp    !: density criterion for mixed layer depth
-   REAL(wp), PUBLIC ::   rho_cqg = 0.03_wp    !: density criterion for mixed layer depth in QG Leith
-   REAL(wp), PUBLIC ::   avt_c   = 5.e-4_wp   !: Kz criterion for the turbocline depth
+   REAL(wp), PUBLIC ::   rho_c = 0.03_wp    !: density criterion for mixed layer depth
+   REAL(wp), PUBLIC ::   avt_c = 5.e-4_wp   ! Kz criterion for the turbocline depth
 
    !!----------------------------------------------------------------------
    !! NEMO/OCE 4.0 , NEMO Consortium (2018)
@@ -51,8 +47,7 @@ CONTAINS
       !!----------------------------------------------------------------------
       zdf_mxl_alloc = 0      ! set to zero if no array to be allocated
       IF( .NOT. ALLOCATED( nmln ) ) THEN
-         ALLOCATE( nmln(jpi,jpj), hmld(jpi,jpj), hmlp(jpi,jpj), hmlpt(jpi,jpj),   &
-            &      nmlnqg(jpi,jpj), hmlpqg(jpi,jpj), STAT= zdf_mxl_alloc )
+         ALLOCATE( nmln(jpi,jpj), hmld(jpi,jpj), hmlp(jpi,jpj), hmlpt(jpi,jpj), STAT= zdf_mxl_alloc )
          !
          CALL mpp_sum ( 'zdfmxl', zdf_mxl_alloc )
          IF( zdf_mxl_alloc /= 0 )   CALL ctl_stop( 'STOP', 'zdf_mxl_alloc: failed to allocate arrays.' )
@@ -78,11 +73,11 @@ CONTAINS
       !!
       !! ** Action  :   nmln, hmld, hmlp, hmlpt
       !!----------------------------------------------------------------------
-      INTEGER, INTENT(in) ::   kt             ! ocean time-step index
+      INTEGER, INTENT(in) ::   kt   ! ocean time-step index
       !
-      INTEGER  ::   ji, jj, jk                ! dummy loop indices
-      INTEGER  ::   iikn, iiknqg, iiki, ikt   ! local integer
-      REAL(wp) ::   zN2_c, zN2_cqg            ! local scalar
+      INTEGER  ::   ji, jj, jk      ! dummy loop indices
+      INTEGER  ::   iikn, iiki, ikt ! local integer
+      REAL(wp) ::   zN2_c           ! local scalar
       INTEGER, DIMENSION(jpi,jpj) ::   imld   ! 2D workspace
       !!----------------------------------------------------------------------
       !
@@ -97,20 +92,13 @@ CONTAINS
       ! w-level of the mixing and mixed layers
       nmln(:,:)  = nlb10               ! Initialization to the number of w ocean point
       hmlp(:,:)  = 0._wp               ! here hmlp used as a dummy variable, integrating vertically N^2
-      nmlnqg(:,:) = nlb10               ! Initialization to the number of w ocean point
-      hmlpqg(:,:) = 0._wp               ! QG Leith mixed layer depth
-      zN2_c  = grav * rho_c * r1_rau0  ! convert density criteria into N^2 criteria
-      zN2_cqg = grav * rho_cqg * r1_rau0 ! convert density criteria into N^2 criteria
+      zN2_c = grav * rho_c * r1_rau0   ! convert density criteria into N^2 criteria
       DO jk = nlb10, jpkm1
          DO jj = 1, jpj                ! Mixed layer level: w-level 
             DO ji = 1, jpi
                ikt = mbkt(ji,jj)
-               !== rho_c = 0.01 criteria ==!
                hmlp(ji,jj) = hmlp(ji,jj) + MAX( rn2b(ji,jj,jk) , 0._wp ) * e3w_n(ji,jj,jk)
                IF( hmlp(ji,jj) < zN2_c )   nmln(ji,jj) = MIN( jk , ikt ) + 1   ! Mixed layer level
-               !== rho_c = 0.03 criteria for QG Leith ==!
-               hmlpqg(ji,jj) = hmlpqg(ji,jj) + MAX( rn2b(ji,jj,jk) , 0._wp ) * e3w_n(ji,jj,jk)
-               IF( hmlpqg(ji,jj) < zN2_cqg )   nmlnqg(ji,jj) = MIN( jk , ikt ) + 1   ! Mixed layer level
             END DO
          END DO
       END DO
@@ -129,10 +117,8 @@ CONTAINS
          DO ji = 1, jpi
             iiki = imld(ji,jj)
             iikn = nmln(ji,jj)
-            iiknqg = nmlnqg(ji,jj)
             hmld (ji,jj) = gdepw_n(ji,jj,iiki  ) * ssmask(ji,jj)    ! Turbocline depth 
             hmlp (ji,jj) = gdepw_n(ji,jj,iikn  ) * ssmask(ji,jj)    ! Mixed layer depth
-            hmlpqg(ji,jj) = gdepw_n(ji,jj,iiknqg ) * ssmask(ji,jj)    ! Mixed layer depth
             hmlpt(ji,jj) = gdept_n(ji,jj,iikn-1) * ssmask(ji,jj)    ! depth of the last T-point inside the mixed layer
          END DO
       END DO
