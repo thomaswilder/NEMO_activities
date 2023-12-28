@@ -15,7 +15,7 @@ An idealised channel model representing the Southern Ocean.
 
 - In [IDEAL](IDEAL/), there are `src`, `EXP`, `tools`, and `scripts` for the idealised channel model configuration.
 - The [scripts](IDEAL/scripts) folder contains bash scripts for automating job submissions on Monsoon2, along with python scripts for setting up the model and also analysing model output.
-- [pyCDFTOOLS](IDEAL/pyCDFTOOLS) contains specific functions to analyse model output. See [J. Mak GitHub repo](https://github.com/julianmak/NEMO-related/tree/master/pyCDFTOOLS) for additional `pyCDFTOOLS`. n.b. differs slightly to the version in ORCA025.
+- [pyCDFTOOLS](IDEAL/pyCDFTOOLS) contains a function `cdftransport`. See [J. Mak GitHub repo](https://github.com/julianmak/NEMO-related/tree/master/pyCDFTOOLS) for additional `pyCDFTOOLS`. n.b. see [this folder](ORCA025/pyCDFTOOLS) for a more fleshed out version of pyCDFTOOLS.
 - A `documentation.md` file also exists that documents the trials and errors in setting up the channel model.
 
 n.b. a channel model confiuration `CANAL` already exists in the NEMO `cfgs` directory. We think this configuration (`IDEAL`) offers more flexibility and ease of use without having to dive into FORTRAN code to make changes.
