@@ -84,7 +84,7 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivdx, hdivdy !: x and y components of horizontal gradients of divergence  at T- points (QG Leith)
 !!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbu          !: Buoyancy at T- point (QG Leith)
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2, rre    !: Burger number, square of Rossby, Froude, and grid Reynolds number at T- points
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2   !: Burger number, square of Rossby, Froude, and grid Reynolds number at T- points
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudx, zbudy !: x and y components of gradients in buoyancy at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   tmpzstx      !: alternative stretching term computed in QG Leith for diagnostic purposes 
@@ -367,7 +367,7 @@ CONTAINS
             !
             !                          ! allocate arrays used in ldf_dyn. 
             ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dzwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,     &
-               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                              &
+               &  zwz(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) ,                                                 &
                &  hdivdx(jpi,jpj,jpk) , hdivdy(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,     &
                &  STAT=ierr )
             IF( ierr /= 0 )   CALL ctl_stop( 'STOP', 'ldf_dyn_init: failed to allocate 2D Leith arrays')
@@ -384,7 +384,7 @@ CONTAINS
             ddivmagsq(:,:,:) = 0._wp
             hdivnqg(:,:,:) = 0._wp
             zwz(:,:,:) = 0._wp
-            rre(:,:,:) = 0._wp
+!!            rre(:,:,:) = 0._wp
             zwzdx(:,:,:) = 0._wp
             zwzdy(:,:,:) = 0._wp
             hdivdx(:,:,:) = 0._wp
@@ -397,9 +397,9 @@ CONTAINS
             l_ldfdyn_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
             !
             !                          ! allocate arrays used in ldf_dyn. 
-            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dzwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,            &
+            ALLOCATE( esqt(jpi,jpj) , esqf(jpi,jpj) , dzwzmagsq(jpi,jpj,jpk) , ddivmagsq(jpi,jpj,jpk) ,           &
                &  zbu(jpi,jpj,jpk) , zbudxup(jpi,jpj,jpk) , zbudyvp(jpi,jpj,jpk) , zwz(jpi,jpj,jpk) ,             &
-               &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) , rre(jpi,jpj,jpk) ,                                      &
+               &  zstx(jpi,jpj,jpk) , zsty(jpi,jpj,jpk) ,                                                         &
                &  rbu(jpi,jpj,jpk), rro2(jpi,jpj,jpk) , zwzdx(jpi,jpj,jpk) , zwzdy(jpi,jpj,jpk) ,                 &
                &  zbudx(jpi,jpj,jpk) , zbudy(jpi,jpj,jpk) , hdivnqg(jpi,jpj,jpk) , rfr2(jpi,jpj,jpk) ,            &
                &  tmpzstx(jpi,jpj,jpk) , zrho10_3(jpi, jpj) , nmlnqg(jpi, jpj) ,                                  &
@@ -431,7 +431,7 @@ CONTAINS
             zwzdy(:,:,:) = 0._wp
             hdivdx(:,:,:) = 0._wp
             hdivdy(:,:,:) = 0._wp
-            rre(:,:,:) = 0._wp
+!!            rre(:,:,:) = 0._wp
             rbu(:,:,:) = 0._wp
             rro2(:,:,:) = 0._wp
             rfr2(:,:,:) = 0._wp
@@ -639,123 +639,110 @@ CONTAINS
          !
       CASE(  33  )       !==  time varying 3D field  ==!   = F( PV gradient, divergence, and gridscale ) (2D Leith)
          !
-         IF( ln_dynldf_lap ) THEN        ! laplacian operator
-            !
-            ! allocate local variables !
-            zcm2dl = (1/rpi)**6        			! (1/pi)^6
-            !
-            !== calculate vertical vorticity (f + zeta) on f-point ==!
-            DO jk = 1, jpkm1                                 ! Horizontal slab
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1   ! vector opt.
-                     zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
-                        &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-                  END DO
-               END DO
-            END DO
-            !
-            !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
-            DO jk = 1, jpkm1
-               DO jj = 2, jpjm1
-                  DO ji = 2, jpim1
-                     zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                        &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                     zwzdx(ji,jj,jk) = zztmpx
-                     zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                        &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
-                     zwzdy(ji,jj,jk) = zztmpy
-                     dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
-            !
-            DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
-               DO jj = 2, jpjm1
-                  DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
-                        &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
-                        &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
-                        &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
-                        &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
-                  END DO  
-               END DO  
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
-            !
-            !== calculate gradients of divergence, then square of magnitude (f-point) ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
-                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
-                     hdivdx(ji,jj,jk) = zztmpx
-                     zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
-                     hdivdy(ji,jj,jk) = zztmpy
-                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
-            !
-            !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
-            ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
-            !
-            DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
-               DO jj = 2, jpjm1
-                  DO ji = fs_2, fs_jpim1 ! vector opt.
-!!                     zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
-!!                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
-                     zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
-                        &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &      ddivmagsq(ji-1,jj-1,jk) ) )
-                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
-                  END DO
-               END DO
-            END DO
-            !
-            DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1 ! vector opt.
-!!                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-!!                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
-                     zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                        &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
-                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
-                  END DO
-               END DO
-            END DO
-            !
-         ENDIF
+         ! allocate local variables !
+         zcm2dl = (1/rpi)**6        			! (1/pi)^6
          !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
-         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
-         DO jk = 1, jpkm1
-			   DO jj = 2, jpjm1
-				   DO ji = 2, jpim1
-				      !== grid scale velocity ==!
-				      zztmp = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
-                     &               ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
-				      rre(ji,jj,jk) = ( SQRT( zztmp ) * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
-			      END DO
+         !== calculate vertical vorticity (f + zeta) on f-point ==!
+         DO jk = 1, jpkm1                                 ! Horizontal slab
+            DO jj = 1, jpjm1
+               DO ji = 1, fs_jpim1   ! vector opt.
+                  zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+                     &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+               END DO
             END DO
          END DO
          !
-         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+         !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
+         DO jk = 1, jpkm1
+            DO jj = 2, jpjm1
+               DO ji = 2, jpim1
+                  zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                     &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                  zwzdx(ji,jj,jk) = zztmpx
+                  zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                     &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+                  zwzdy(ji,jj,jk) = zztmpy
+                  dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
+         !
+         DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
+            DO jj = 2, jpjm1
+               DO ji = fs_2, fs_jpim1   ! vector opt.
+                  hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+                     &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+                     &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+                     &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+                     &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
+               END DO  
+            END DO  
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+         !
+         !== calculate gradients of divergence, then square of magnitude (f-point) ==!
+         DO jk = 1, jpkm1
+            DO jj = 1, jpjm1
+               DO ji = 1, jpim1
+                  zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+                     &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
+                  hdivdx(ji,jj,jk) = zztmpx
+                  zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+                     &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
+                  hdivdy(ji,jj,jk) = zztmpy
+                  ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
+         !
+         !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+         ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
+         ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
+         !
+         DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
+            DO jj = 2, jpjm1
+               DO ji = fs_2, fs_jpim1 ! vector opt.
+!!                     zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
+!!                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+                  zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+                     &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                     &      ddivmagsq(ji-1,jj-1,jk) ) )
+                  ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+               END DO
+            END DO
+         END DO
+         !
+         DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
+            DO jj = 1, jpjm1
+               DO ji = 1, fs_jpim1 ! vector opt.
+!!                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
+!!                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+                  zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                     &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
+                  ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
+         !
+         IF( ln_dynldf_lap ) ! laplacian operator already computed
+         IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            ahmt(:,:,:) = ahmt(:,:,:) * esqt(:,:) / 8._wp
+            ahmf(:,:,:) = ahmf(:,:,:) * esqf(:,:) / 8._wp
+         ENDIF
          !
          !== assigning for output and use in step.f90 ==!
-         ahm_leith(:,:,:) = ahmt(:,:,:)
+         ahm_leith(:,:,:) = ahmt(:,:,:) ! can this be assigned only when GM/Redi turned on?
          !
          !== 2D Leith diagnostics ==!
-         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
          CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
          CALL iom_put( "zwzdy"   , zwzdy(:,:,:) )     ! y component of vorticity gradient T- point
          CALL iom_put( "hdivdx"  , hdivdx(:,:,:) )    ! x component of divergence gradient T- point
@@ -764,189 +751,162 @@ CONTAINS
          !
       CASE(  34  )       !==  time varying 3D field  ==!   = F(QG PV gradient, divergence, and gridscale) (QG Leith)
          !
-         IF( ln_dynldf_lap ) THEN        ! laplacian operator
-            !
-            ! allocate local variables !
-            zcmqgl = (1/rpi)**6         			! (1/pi)^6
-            !
-            !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
-            ! initialization
-            zrho3 = 0.03_wp
+         ! allocate local variables !
+         zcmqgl = (1/rpi)**6         			! (1/pi)^6
+         !
+         !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
+         ! initialization
+         zrho3 = 0.03_wp
+         DO jj = 1, jpj
+            DO ji = 1, jpi
+               nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
+               zztmp = gdepw_b(ji,jj,mbkt(ji,jj)+1)
+               zrho10_3(ji,jj) = zztmp
+            END DO
+         END DO 
+         !
+         ! ------------------------- !
+         ! MLD: rho = rho10m + zrho3 !
+         ! ------------------------- !
+         DO jk = jpkm1, nlb10, -1    ! loop from bottom to nlb10
             DO jj = 1, jpj
                DO ji = 1, jpi
-                  nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
-                  zztmp = gdepw_b(ji,jj,mbkt(ji,jj)+1)
-                  zrho10_3(ji,jj) = zztmp
+                  ikt = mbkt(ji,jj)
+                  zzdep = gdepw_b(ji,jj,jk) * tmask(ji,jj,1)
+                  zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
+                  IF( zztmp > zrho3 ) THEN
+                     zrho10_3(ji,jj) = zzdep                              ! > 0.03
+                     nmlnqg(ji,jj) = MIN(jk, ikt) + 1                     ! Mixed layer level
+                  ENDIF
                END DO
-            END DO 
-            !
-            ! ------------------------- !
-            ! MLD: rho = rho10m + zrho3 !
-            ! ------------------------- !
-            DO jk = jpkm1, nlb10, -1    ! loop from bottom to nlb10
-               DO jj = 1, jpj
-                  DO ji = 1, jpi
-                     ikt = mbkt(ji,jj)
-                     zzdep = gdepw_b(ji,jj,jk) * tmask(ji,jj,1)
-                     zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
-                     IF( zztmp > zrho3 ) THEN
-                        zrho10_3(ji,jj) = zzdep                              ! > 0.03
-                        nmlnqg(ji,jj) = MIN(jk, ikt) + 1                     ! Mixed layer level
-                     ENDIF
-                  END DO
-               END DO
-            END DO
-!            !
-!            DO jk = 1, jpkm1
-!               DO jj = 1, jpjm1
-!                  DO ji = 1, jpim1
-!                     IF( jk <= nmlnqg(ji,jj) ) mld_qg(ji,jj) = mld_qg(ji,jj) + e3w_n(ji,jj,jk)
-!                  END DO
-!               END DO
-!            END DO
-            !
-            !== calculate vertical vorticity (f+zeta) on f-point ==!
-            DO jk = 1, jpkm1                                 ! Horizontal slab
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1   ! vector opt.
-                     zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
-                        &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-                  END DO
-               END DO
-            END DO
-            !
-            !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
-            DO jk = 1, jpkm1
-               DO jj = 2, jpjm1
-                  DO ji = 2, jpim1
-                     zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                        &                     + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                     zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                        &                     + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
-            !
-            !== Compute stretching term at first time step index and then at specified intervals ** runs at every timestep ** ==!
-            IF( kt == kit000 ) THEN       !! compute stretching subroutine
-               !
-               zstlimx(:,:,:) = 0._wp
-               zstlimy(:,:,:) = 0._wp
-               !
-               CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-               !
-            ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
-               !
-               CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-               !
-            ENDIF
-            !
-            DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
-               DO jj = 2, jpjm1
-                  DO ji = fs_2, fs_jpim1   ! vector opt.
-                     hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
-                        &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
-                        &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
-                        &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
-                        &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
-                  END DO  
-               END DO  
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
-            !
-            !== calculate gradients of divergence, then square of magnitude (f-point) ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, jpim1
-                     zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-                        &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
-                     hdivdx(ji,jj,jk) = zztmpx
-                     zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-                        &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
-                     hdivdy(ji,jj,jk) = zztmpy
-                     ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
-            !
-            !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
-            DO jk = 1, jpkm1
-               DO jj = 1, jpj
-                  DO ji = 1, jpi
-                     zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
-                     zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
-                     dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-                  END DO
-               END DO
-            END DO
-            !
-            !== calculate viscosity coefficient ==!
-            !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-            ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
-            ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
-            !
-            DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
-               DO jj = 2, jpjm1
-                  DO ji = fs_2, fs_jpim1 ! vector opt.
-!!                     zsqqg = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
-                     ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
-                     ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &  ddivmagsq(ji-1,jj-1,jk) )
-!                     ahmt(ji,jj,jk) = SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg )
-                     !== Set max value on viscosity coefficient ==!
-                     zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
-                        &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                        &      ddivmagsq(ji-1,jj-1,jk) ) )
-                     ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
-                  END DO
-               END DO
-            END DO
-            !
-            CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
-            !
-            DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1 ! vector opt.
-!!                     zsqqg = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-!                     ahmf(ji,jj,jk) = SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg )
-                     !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
-                     zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                        &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
-                     ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
-                  END DO
-               END DO
-            END DO
-            !
-         ENDIF
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
-         ! == Compute grid Reynolds number (|U| delta_h / nu) as shown in Megann and Storkey (2021) ==!
-         DO jk = 1, jpkm1
-			   DO jj = 2, jpjm1
-				   DO ji = 2, jpim1
-				      !== grid scale velocity ==!
-				      zztmp = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
-                     &               ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
-				      rre(ji,jj,jk) = ( SQRT( zztmp ) * SQRT( esqt(ji,jj) ) ) / ahmt(ji,jj,jk)
-			      END DO
             END DO
          END DO
          !
-         CALL lbc_lnk_multi( 'ldfdyn', rre, 'T', 1. )
+         !== calculate vertical vorticity (f+zeta) on f-point ==!
+         DO jk = 1, jpkm1                                 ! Horizontal slab
+            DO jj = 1, jpjm1
+               DO ji = 1, fs_jpim1   ! vector opt.
+                  zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+                     &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+               END DO
+            END DO
+         END DO
+         !
+         !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
+         DO jk = 1, jpkm1
+            DO jj = 2, jpjm1
+               DO ji = 2, jpim1
+                  zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+                     &                     + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+                  zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+                     &                     + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
+         !
+         !== Compute stretching term at first time step index and then at specified intervals ** runs at every timestep ** ==!
+         IF( kt == kit000 ) THEN       !! compute stretching subroutine
+            !
+            zstlimx(:,:,:) = 0._wp
+            zstlimy(:,:,:) = 0._wp
+            !
+            CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
+            !
+         ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
+            !
+            CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
+            !
+         ENDIF
+         !
+         DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
+            DO jj = 2, jpjm1
+               DO ji = fs_2, fs_jpim1   ! vector opt.
+                  hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+                     &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+                     &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+                     &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+                     &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
+               END DO  
+            END DO  
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+         !
+         !== calculate gradients of divergence, then square of magnitude (f-point) ==!
+         DO jk = 1, jpkm1
+            DO jj = 1, jpjm1
+               DO ji = 1, jpim1
+                  zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+                     &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
+                  hdivdx(ji,jj,jk) = zztmpx
+                  zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+                     &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
+                  hdivdy(ji,jj,jk) = zztmpy
+                  ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
+         !
+         !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
+         DO jk = 1, jpkm1
+            DO jj = 1, jpj
+               DO ji = 1, jpi
+                  zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
+                  zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
+                  dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+               END DO
+            END DO
+         END DO
+         !
+         !== calculate viscosity coefficient ==!
+         !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
+         ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
+         ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
+         !
+         DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
+            DO jj = 2, jpjm1
+               DO ji = fs_2, fs_jpim1 ! vector opt.
+                  ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
+                  ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                     &  ddivmagsq(ji-1,jj-1,jk) )
+                  !== Set max value on viscosity coefficient ==!
+                  zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+                     &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+                     &      ddivmagsq(ji-1,jj-1,jk) ) )
+                  ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
+         !
+         DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
+            DO jj = 1, jpjm1
+               DO ji = 1, fs_jpim1 ! vector opt.
+                  !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
+                  zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+                     &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
+                  ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
+               END DO
+            END DO
+         END DO
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
+         !
+         IF( ln_dynldf_lap )         ! laplacian operator already computed
+         IF( ln_dynldf_blp ) THEN    ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            ahmt(:,:,:) = ahmt(:,:,:) * esqt(:,:) / 8._wp
+            ahmf(:,:,:) = ahmf(:,:,:) * esqf(:,:) / 8._wp
+         ENDIF
          !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:)
          !
          !== QG Leith diagnostics ==!
-         CALL iom_put( "rre"     , rre(:,:,:) )       ! grid Reynolds number T- point
          CALL iom_put( "rro2"    , rro2(:,:,:) )      ! square of Rossby number T- point
          CALL iom_put( "rbu"     , rbu(:,:,:) )       ! Burger number T- point
          CALL iom_put( "rfr2"    , rfr2(:,:,:) )      ! square of Froude number T- point
