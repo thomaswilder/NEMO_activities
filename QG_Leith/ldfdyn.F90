@@ -84,7 +84,7 @@ MODULE ldfdyn
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstx, zsty   !: x and y components of stretching at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zwzdx, zwzdy !: x and y components of horizontal gradients of vertical vorticity at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   hdivdx, hdivdy !: x and y components of horizontal gradients of divergence  at T- points (QG Leith)
-!!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx, zstlimy !: Limit of stretching term at T- points (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbu          !: Buoyancy at T- point (QG Leith)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rbu, rro2, rfr2   !: Burger number, square of Rossby, Froude, and grid Reynolds number at T- points
    REAL(wp),         ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zbudxup, zbudyvp !: gradients of buoyancy - x and y components on U- point and V- points, resp. (QG Leith)
