@@ -58,6 +58,8 @@ MODULE ldfdyn
    !                                        ! QG Leith viscosity  (nn_ahm_ijk_t = 34) 
    REAL(wp), PUBLIC ::   rn_cqgc_vor               !: QG Leith tuning parameter for vorticity part, typically set to 1
    REAL(wp), PUBLIC ::   rn_cqgc_div               !: QG Leith tuning parameter for divergence part, typically set to 1
+   !                                        ! Leith viscosity parameter
+   REAL(wp), PUBLIC ::   rn_minleith           !: Minimum value used in biharmonic Leith viscosity
    !                                        ! iso-neutral laplacian (ln_dynldf_lap=ln_dynldf_iso=T)
    REAL(wp), PUBLIC ::   rn_ahm_b              !: lateral laplacian background eddy viscosity  [m2/s]
 
@@ -143,7 +145,7 @@ CONTAINS
          &                 nn_ahm_ijk_t , rn_Uv    , rn_Lv,   rn_ahm_b,   &   ! lateral eddy coefficient
          &                 rn_csmc      , rn_minfac    , rn_maxfac,       &   ! Smagorinsky settings
          &                 rn_c2dc_vor, rn_c2dc_div,                      &   ! 2D Leith tuning parameters
-         &                 rn_cqgc_vor, rn_cqgc_div                           ! QG Leith tuning parameters
+         &                 rn_cqgc_vor, rn_cqgc_div, rn_minleith              ! QG Leith tuning parameters
       !!----------------------------------------------------------------------
       !
       REWIND( numnam_ref )
@@ -190,6 +192,9 @@ CONTAINS
          WRITE(numout,*) '      QG Leith settings (nn_ahm_ijk_t  = 34) :'
          WRITE(numout,*) '         QG Leith coefficient vorticity       rn_cqgc_vor   = ', rn_cqgc_vor
          WRITE(numout,*) '         QG Leith coefficient divergence      rn_cqgc_div   = ', rn_cqgc_div
+         !
+         WRITE(numout,*) '      Biharmonic Leith settings (nn_ahm_ijk_t  = 33/34) :'
+         WRITE(numout,*) '         minimum leith viscosity              rn_minleith   = ', rn_minleith
       ENDIF
 
       !
@@ -713,7 +718,7 @@ CONTAINS
                   zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(jj,ji), e2t(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
                   ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                END DO
             END DO
@@ -727,7 +732,7 @@ CONTAINS
 !!                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                   zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
                   ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                END DO
             END DO
@@ -739,9 +744,20 @@ CONTAINS
             ! laplacian operator already computed
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             DO jk = 1, jpkm1
-               ahmt(:,:,jk) = r1_8 * ahmt(:,:,jk) * MIN( e1t(jj,ji), e2t(jj,ji) )**2
-               ahmf(:,:,jk) = r1_8 * ahmf(:,:,jk) * MIN( e1f(jj,ji), e2f(jj,ji) )**2
+               DO jj = 2, jpjm1
+                  DO ji = fs_2, fs_jpim1
+                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
+                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                  END DO
+               END DO
+               DO jj = 1, jpjm1
+                  DO ji = 1, fs_jpim1
+                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
+                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                  END DO
+               END DO
             END DO
+            !
          ENDIF
          !
          !== assigning for output and use in step.f90 ==!
@@ -882,7 +898,7 @@ CONTAINS
                   zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(jj,ji), e2t(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
                   ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
                END DO
             END DO
@@ -902,7 +918,8 @@ CONTAINS
             END DO
          END DO
          !
-         print *, 'ahmt is', ahmt(10,10,1)
+         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
+         print *, 'min ahmt is', MINVAL( ahmt(:,:,6) )
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
@@ -910,13 +927,25 @@ CONTAINS
             ! laplacian operator already computed
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             DO jk = 1, jpkm1
-               ahmt(:,:,jk) = r1_8 * ahmt(:,:,jk) * MIN( e1t(jj,ji), e2t(jj,ji) )**2
-               ahmf(:,:,jk) = r1_8 * ahmf(:,:,jk) * MIN( e1f(jj,ji), e2f(jj,ji) )**2
+               DO jj = 2, jpjm1
+                  DO ji = fs_2, fs_jpim1
+                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
+                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                  END DO
+               END DO
+               DO jj = 1, jpjm1
+                  DO ji = 1, fs_jpim1
+                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
+                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                  END DO
+               END DO
             END DO
+            !
          ENDIF
          !
          print *, 'esqt is', esqt(10,10)
-         print *, 'ahmt is', ahmt(10,10,1)
+         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
+         print *, 'min ahmt is', MINVAL( ahmt(:,:,6) )
          !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:)
