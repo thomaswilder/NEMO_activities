@@ -125,8 +125,8 @@ CONTAINS
       !!                  = 30    = F(i,j,k)   = 2D (case 20) + decrease with depth (case 10)
       !!                  = 31    = F(i,j,k,t) = F(local velocity) (  1/2  |u|e     laplacian operator
       !!                                                           or 1/12 |u|e^3 bilaplacian operator )
-      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
-      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
+!!      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+!!      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!              * initialisation of the eddy induced velocity coefficient by a call to ldf_eiv_init 
       !!            
       !! ** action  : ahtu, ahtv initialized one for all or l_ldftra_time set to true
@@ -366,18 +366,18 @@ CONTAINS
             !
             l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
             !
-         CASE(  33  )      !==  time varying 3D field  ==!
-            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
-            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
-            !
-            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
-            !
-         CASE(  34  )       !==  time varying 3D field  ==!
-            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
-            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
-            !
-            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
-            !
+!!         CASE(  33  )      !==  time varying 3D field  ==!
+!!            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
+!!            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
+!!            !
+!!            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
+!!            !
+!!         CASE(  34  )       !==  time varying 3D field  ==!
+!!            IF(lwp) WRITE(numout,*) '   ==>>>   eddy diffusivity = F( latitude, longitude, depth , time )'
+!!            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
+!!            !
+!!            l_ldftra_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
+!!            !
          CASE DEFAULT
             CALL ctl_stop('ldf_tra_init: wrong choice for nn_aht_ijk_t, the type of space-time variation of aht')
          END SELECT
@@ -397,7 +397,7 @@ CONTAINS
    END SUBROUTINE ldf_tra_init
 
 
-   SUBROUTINE ldf_tra( kt, ahm_leith )
+   SUBROUTINE ldf_tra( kt )
       !!----------------------------------------------------------------------
       !!                  ***  ROUTINE ldf_tra  ***
       !! 
@@ -412,18 +412,18 @@ CONTAINS
       !!                 = 31    ahtu, ahtv = F(i,j,k,t) = F(local velocity) (  |u|e  /12   laplacian operator
       !!                                                                     or |u|e^3/12 bilaplacian operator )
       !!
-      !!                 = 33    ahtu, ahtv = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
-      !!
-      !!                 = 34    ahtu, ahtv = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
+!!      !!                 = 33    ahtu, ahtv = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+!!      !!
+!!      !!                 = 34    ahtu, ahtv = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!
       !!              * time varying EIV coefficients: call to ldf_eiv routine
       !!
       !! ** action  :   ahtu, ahtv   update at each time step   
       !!                aeiu, aeiv      -       -     -    -   (if ln_ldfeiv=T) 
-      !!                aht/aei = ahm                          (if ln_ldfeiv=T and nn_aht/nn_aei = 33/34) 
+!!      !!                aht/aei = ahm                          (if ln_ldfeiv=T and nn_aht/nn_aei = 33/34) 
       !!----------------------------------------------------------------------
       INTEGER,  INTENT(in) ::   kt   ! time step
-      REAL(wp), INTENT(inout), DIMENSION(:,:,:) ::   ahm_leith                ! ahmt for use in ldftra
+!!      REAL(wp), INTENT(inout), DIMENSION(:,:,:) ::   ahm_leith                ! ahmt for use in ldftra
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       REAL(wp) ::   zaht, zahf, zaht_min, zDaht, z1_f20   ! local scalar
@@ -479,51 +479,41 @@ CONTAINS
             END DO
          ENDIF
          !
-      CASE(  33, 34  )    !==  time varying 3D field  ==!   2D Leith (33) and QG Leith (34)
-         IF( ln_traldf_lap     ) THEN 
-		      DO jk = 1, jpkm1
-		         DO jj = 1, jpjm1
-		            DO ji = 1, jpim1
-		               ahtu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-		               ahtv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
-		            END DO
-		         END DO
-		      END DO
-		      !== no ln_traldf_blp ==!
-		   ENDIF
-         !
-         CALL lbc_lnk_multi( 'ldftra', ahtu(:,:,1), 'U', 1. , ahtu(:,:,1), 'V', 1. )      ! lateral boundary condition
-         !
+!!      CASE(  33, 34  )    !==  time varying 3D field  ==!   2D Leith (33) and QG Leith (34)
+!!         IF( ln_traldf_lap     ) THEN 
+!!		      DO jk = 1, jpkm1
+!!		         DO jj = 1, jpjm1
+!!		            DO ji = 1, jpim1
+!!		               ahtu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+!!		               ahtv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+!!		            END DO
+!!		         END DO
+!!		      END DO
+!!		      !== no ln_traldf_blp ==!
+!!		   ENDIF
+!!         !
+!!         CALL lbc_lnk_multi( 'ldftra', ahtu(:,:,1), 'U', 1. , ahtu(:,:,1), 'V', 1. )      ! lateral boundary condition
+!!         !
       END SELECT
-      !
-      IF( ln_ldfeiv .AND. ( nn_aei_ijk_t == 33 .OR. nn_aei_ijk_t == 34 ) ) THEN       ! eddy induced velocity coefficients
-         !                                ! Leith coefficients are not considered seperately
-         ! CALL ldf_eiv( kt, aei0, aeiu, aeiv ) ! does this function need to be called for Leith schemes???
-         IF( ln_traldf_lap     ) THEN
-		      DO jk = 1, jpkm1
-		         DO jj = 1, jpjm1
-		            DO ji = 1, jpim1
-		               aeiu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
-		               aeiv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
-		            END DO
-		         END DO
-		      END DO
-		      !== no ln_traldf_blp ==!
-		   ENDIF
-         !
-         CALL lbc_lnk_multi( 'ldftra', aeiu(:,:,1), 'U', 1. , aeiv(:,:,1), 'V', 1. )      ! lateral boundary condition
-!         !
-!      ELSEIF( ln_ldfeiv .AND. nn_aei_ijk_t == 34 ) THEN
-!      	DO jk = 1, jpkm1
-!            DO jj = 1, jpjm1
-!               DO ji = 1, jpim1
-!                  aeiu(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji+1,jj  ,jk) )
-!                  aeiv(ji,jj,jk) = r1_2 * ( ahmt(ji,jj,jk) + ahmt(ji  ,jj+1,jk) )
-!               END DO
-!            END DO
-!         END DO
-         !
-      ENDIF
+!!      !
+!!      IF( ln_ldfeiv .AND. ( nn_aei_ijk_t == 33 .OR. nn_aei_ijk_t == 34 ) ) THEN       ! eddy induced velocity coefficients
+!!         !                                ! Leith coefficients are not considered seperately
+!!         ! CALL ldf_eiv( kt, aei0, aeiu, aeiv ) ! does this function need to be called for Leith schemes???
+!!         IF( ln_traldf_lap     ) THEN
+!!		      DO jk = 1, jpkm1
+!!		         DO jj = 1, jpjm1
+!!		            DO ji = 1, jpim1
+!!		               aeiu(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji+1,jj  ,jk) ) * umask(ji,jj,jk)
+!!		               aeiv(ji,jj,jk) = r1_2 * ( ahm_leith(ji,jj,jk) + ahm_leith(ji  ,jj+1,jk) ) * vmask(ji,jj,jk)
+!!		            END DO
+!!		         END DO
+!!		      END DO
+!!		      !== no ln_traldf_blp ==!
+!!		   ENDIF
+!!         !
+!!         CALL lbc_lnk_multi( 'ldftra', aeiu(:,:,1), 'U', 1. , aeiv(:,:,1), 'V', 1. )      ! lateral boundary condition
+!!         !
+!!      ENDIF
       !
       CALL iom_put( "ahtu_2d", ahtu(:,:,1) )   ! surface u-eddy diffusivity coeff.
       CALL iom_put( "ahtv_2d", ahtv(:,:,1) )   ! surface v-eddy diffusivity coeff.
@@ -557,8 +547,8 @@ CONTAINS
       !!                  !
       !!                  =-30 => = F(i,j,k)   = shape read in 'eddy_diffusivity.nc' file
       !!                  = 30    = F(i,j,k)   = 2D (case 20) + decrease with depth (case 10)
-      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
-      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
+!!      !!                  = 33    = F(i,j,k,t) = F( grad( PV and divergence), and gridscale) (laplacian operator) (2D Leith)
+!!      !!                  = 34    = F(i,j,k,t) = F( grad( QG PV and divergence), and gridscale) (laplacian operator) (QG Leith)
       !!
       !! ** Action  :   aeiu , aeiv   :  initialized one for all or l_ldftra_time set to true
       !!                l_ldfeiv_time : =T if EIV coefficients vary with time
@@ -677,18 +667,18 @@ CONTAINS
             CALL ldf_c2d( 'TRA', zUfac      , inn        , aeiu, aeiv )    ! surface value proportional to scale factor^inn
             CALL ldf_c1d( 'TRA', aeiu(:,:,1), aeiv(:,:,1), aeiu, aeiv )    ! reduction with depth
             !
-         CASE(  33  )      !==  time varying 3D field  ==!
-            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
-            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
-            !
-            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
-            !
-         CASE(  34  )       !==  time varying 3D field  ==!
-            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
-            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
-            !
-            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
-            !
+!!         CASE(  33  )      !==  time varying 3D field  ==!
+!!            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
+!!            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (2D Leith)'
+!!            !
+!!            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_tra routine in step.F90
+!!            !
+!!         CASE(  34  )       !==  time varying 3D field  ==!
+!!            IF(lwp) WRITE(numout,*) '   ==>>>   eddy induced velocity coef. = F( latitude, longitude, depth , time )'
+!!            IF(lwp) WRITE(numout,*) '           proportional to the PV gradient, divergence, and gridscale (QG Leith)'
+!!            !
+!!            l_ldfeiv_time = .TRUE.     ! will be calculated by call to ldf_dyn routine in step.F90
+!!            !
          CASE DEFAULT
             CALL ctl_stop('ldf_tra_init: wrong choice for nn_aei_ijk_t, the type of space-time variation of aei')
          END SELECT

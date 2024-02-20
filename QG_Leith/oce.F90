@@ -31,9 +31,9 @@ MODULE oce
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   rhop   !: potential volumic mass                           [kg/m3]
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   Cu_adv                   !: vertical Courant number (adaptive-implicit)
    
-   !! Leith fields 
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx ,  zstlimy     !: QG Leith stretching terms in x,y- direction
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ahm_leith              !: Leith field t-point for ldftra
+!!   !! Leith fields 
+!!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zstlimx ,  zstlimy     !: QG Leith stretching terms in x,y- direction
+!!   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   ahm_leith              !: Leith field t-point for ldftra
 
    !! free surface                                      !  before  ! now    ! after  !
    !! ------------                                      !  fields  ! fields ! fields !
@@ -116,8 +116,8 @@ CONTAINS
 #if defined key_agrif
       ALLOCATE( ub2_i_b(jpi,jpj), vb2_i_b(jpi,jpj)                                  , STAT=ierr(6) )
 #endif
-         !
-      ALLOCATE( zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , ahm_leith(jpi,jpj,jpk) , STAT=ierr(7) )
+!!         !
+!!      ALLOCATE( zstlimx(jpi,jpj,jpk) , zstlimy(jpi,jpj,jpk) , ahm_leith(jpi,jpj,jpk) , STAT=ierr(7) )
          !
       oce_alloc = MAXVAL( ierr )
       IF( oce_alloc /= 0 )   CALL ctl_stop( 'STOP', 'oce_alloc: failed to allocate arrays' )
