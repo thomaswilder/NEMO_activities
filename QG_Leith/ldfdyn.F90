@@ -58,8 +58,8 @@ MODULE ldfdyn
    !                                        ! QG Leith viscosity  (nn_ahm_ijk_t = 34) 
    REAL(wp), PUBLIC ::   rn_cqgc_vor               !: QG Leith tuning parameter for vorticity part, typically set to 1
    REAL(wp), PUBLIC ::   rn_cqgc_div               !: QG Leith tuning parameter for divergence part, typically set to 1
-   !                                        ! Leith viscosity parameter
-   REAL(wp), PUBLIC ::   rn_minleith           !: Minimum value used in biharmonic Leith viscosity
+!!   !                                        ! Leith viscosity parameter
+!!   REAL(wp), PUBLIC ::   rn_minleith           !: Minimum value used in biharmonic Leith viscosity
    !                                        ! iso-neutral laplacian (ln_dynldf_lap=ln_dynldf_iso=T)
    REAL(wp), PUBLIC ::   rn_ahm_b              !: lateral laplacian background eddy viscosity  [m2/s]
 
@@ -145,7 +145,7 @@ CONTAINS
          &                 nn_ahm_ijk_t , rn_Uv    , rn_Lv,   rn_ahm_b,   &   ! lateral eddy coefficient
          &                 rn_csmc      , rn_minfac    , rn_maxfac,       &   ! Smagorinsky settings
          &                 rn_c2dc_vor, rn_c2dc_div,                      &   ! 2D Leith tuning parameters
-         &                 rn_cqgc_vor, rn_cqgc_div, rn_minleith              ! QG Leith tuning parameters
+         &                 rn_cqgc_vor, rn_cqgc_div                           ! QG Leith tuning parameters
       !!----------------------------------------------------------------------
       !
       REWIND( numnam_ref )
@@ -192,9 +192,9 @@ CONTAINS
          WRITE(numout,*) '      QG Leith settings (nn_ahm_ijk_t  = 34) :'
          WRITE(numout,*) '         QG Leith coefficient vorticity       rn_cqgc_vor   = ', rn_cqgc_vor
          WRITE(numout,*) '         QG Leith coefficient divergence      rn_cqgc_div   = ', rn_cqgc_div
-         !
-         WRITE(numout,*) '      Biharmonic Leith settings (nn_ahm_ijk_t  = 33/34) :'
-         WRITE(numout,*) '         minimum leith viscosity              rn_minleith   = ', rn_minleith
+!!         !
+!!         WRITE(numout,*) '      Biharmonic Leith settings (nn_ahm_ijk_t  = 33/34) :'
+!!         WRITE(numout,*) '         minimum leith viscosity              rn_minleith   = ', rn_minleith
       ENDIF
 
       !
@@ -739,13 +739,15 @@ CONTAINS
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+!!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                     ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
+!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
             END DO
@@ -1029,13 +1031,15 @@ CONTAINS
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+!!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                     ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
-                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
             END DO
