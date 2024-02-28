@@ -747,7 +747,7 @@ CONTAINS
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
 !!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
-                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
             END DO
@@ -1016,7 +1016,7 @@ CONTAINS
                   !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
                   zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
                   ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
                END DO
             END DO
@@ -1039,7 +1039,7 @@ CONTAINS
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
 !!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
-                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
             END DO
