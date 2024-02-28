@@ -1047,6 +1047,11 @@ CONTAINS
             END DO
          END DO
          !
+         print *, 'U_sc is', zusq
+         print *, 'ahmf_max is', ahmf_max
+         print *, 'ahmf_min is', ahmf_min
+         print *, 'ahmf is', ahmf(10,10,1)
+         !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
          IF( ln_dynldf_lap ) THEN
