@@ -720,7 +720,7 @@ CONTAINS
 		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
 		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
-                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj)) ) ) * r1_2
+                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
                   ahmt(ji,jj,jk) = MAX( MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max ), ahmt_min )
                END DO
             END DO
