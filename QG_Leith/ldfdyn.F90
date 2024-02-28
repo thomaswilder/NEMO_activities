@@ -720,7 +720,7 @@ CONTAINS
 		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
 		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
-                  ahmt_min = ( zusq * MIN( e1t(jj,ji), e2t(jj,ji) ) ) * r1_2
+                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj)) ) ) * r1_2
                   ahmt(ji,jj,jk) = MAX( MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max ), ahmt_min )
                END DO
             END DO
@@ -732,12 +732,12 @@ CONTAINS
                   zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
                   !== CFL criterion ==!
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   !== grid scale velocity ==!
 		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
 		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
-                  ahmf_min = ( zusq * MIN( e1f(jj,ji), e2f(jj,ji) ) ) * r1_2
+                  ahmf_min = ( zusq * MIN( e1f(ji,jj), e2f(ji,jj) ) ) * r1_2
                   ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max ), ahmf_min )
                END DO
             END DO
@@ -1021,7 +1021,7 @@ CONTAINS
 		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
 		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
-                  ahmt_min = ( zusq * MIN( e1t(jj,ji), e2t(jj,ji) ) ) * r1_2
+                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
                   ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max ), ahmt_min )
                   END DO
             END DO
@@ -1036,12 +1036,12 @@ CONTAINS
                   zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
                   !== CFL criterion ==!
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   !== grid scale velocity ==!
 		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
 		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
-                  ahmf_min = ( zusq * MIN( e1f(jj,ji), e2f(jj,ji) ) ) * r1_2
+                  ahmf_min = ( zusq * MIN( e1f(ji,jj), e2f(ji,jj) ) ) * r1_2
                   ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max ), ahmf_min )
                END DO
             END DO
