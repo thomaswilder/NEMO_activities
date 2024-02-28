@@ -499,6 +499,7 @@ CONTAINS
       REAL(wp) ::   zcmsmag, zstabf_lo, zstabf_up, zdelta, zdb     ! local scalar (option 32)
       REAL(wp) ::   zcm2dl, zsq2d                                  ! local scalar (option 33)
       REAL(wp) ::   ahmt_max, ahmf_max, zztmpx, zztmpy             ! local scalar (option 33/34)
+      REAL(wp) ::   ahmt_min, ahmf_min                             ! local scalar (option 33/34)
       REAL(wp) ::   zcmqgl, zsqqg, zztmp, zzdep, zu                ! local scalar (option 34)
       REAL(wp) ::   zbuup, zbulw, zusq, znsq                       ! local scalar (option 34)
       REAL(wp) ::   zker1, zker2, zqglep1, zqglep2                 ! more local scalar (option 34)
@@ -713,8 +714,14 @@ CONTAINS
                   zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
-                  ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+                  !== CFL criterion ==!
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  !== grid scale velocity ==!
+		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
+		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
+                  !== Reynolds number limit ==!
+                  ahmt_min = ( zusq * MIN( e1t(jj,ji), e2t(jj,ji) ) ) * r1_2
+                  ahmt(ji,jj,jk) = MAX( MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max ), ahmt_min )
                END DO
             END DO
          END DO
@@ -724,8 +731,14 @@ CONTAINS
                DO ji = 1, fs_jpim1 ! vector opt.
                   zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
-                  ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+                  !== CFL criterion ==!
+                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  !== grid scale velocity ==!
+		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
+		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
+                  !== Reynolds number limit ==!
+                  ahmf_min = ( zusq * MIN( e1f(jj,ji), e2f(jj,ji) ) ) * r1_2
+                  ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max ), ahmf_min )
                END DO
             END DO
          END DO
@@ -1002,9 +1015,15 @@ CONTAINS
                   zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
-                  ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
-               END DO
+                  !== CFL criterion ==!
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  !== grid scale velocity ==!
+		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
+		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
+                  !== Reynolds number limit ==!
+                  ahmt_min = ( zusq * MIN( e1t(jj,ji), e2t(jj,ji) ) ) * r1_2
+                  ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max ), ahmt_min )
+                  END DO
             END DO
          END DO
          !
@@ -1016,8 +1035,14 @@ CONTAINS
                   !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
                   zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
-                  ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
+                  !== CFL criterion ==!
+                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  
+                  !== grid scale velocity ==!
+		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
+		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
+                  !== Reynolds number limit ==!
+                  ahmf_min = ( zusq * MIN( e1f(jj,ji), e2f(jj,ji) ) ) * r1_2
+                  ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max ), ahmf_min )
                END DO
             END DO
          END DO
