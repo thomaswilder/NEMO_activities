@@ -1057,7 +1057,7 @@ CONTAINS
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             DO jk = 1, jpkm1
                DO jj = 1, jpjm1
-                  DO ji = fs_2, fs_jpim1
+                  DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
 !!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
