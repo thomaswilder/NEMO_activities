@@ -1023,7 +1023,7 @@ CONTAINS
                   !== Reynolds number limit ==!
                   ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
                   ahmf(ji,jj,jk) = MAX( MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max ), ahmt_min )
-                  END DO
+               END DO
             END DO
          END DO
          !
@@ -1050,7 +1050,7 @@ CONTAINS
          print *, 'U_sc is', zusq
          print *, 'ahmf_max is', ahmf_max
          print *, 'ahmf_min is', ahmf_min
-         print *, 'ahmf is', ahmf(10,10,1)
+         print *, 'ahmf_lap is', ahmf(10,10,1)
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
@@ -1075,6 +1075,8 @@ CONTAINS
             END DO
             !
          ENDIF
+         !
+         print *, 'ahmf_bilap is', ahmf(10,10,1)
 !!         !
 !!         !== assigning for output and use in step.f90 ==!
 !!         ahm_leith(:,:,:) = ahmt(:,:,:)
