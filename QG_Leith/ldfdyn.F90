@@ -1052,8 +1052,6 @@ CONTAINS
          print *, 'ahmf_min is', ahmf_min
          print *, 'ahmf_lap is', ahmf(10,10,1)
          !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
          IF( ln_dynldf_lap ) THEN
             ! laplacian operator already computed
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
@@ -1075,6 +1073,8 @@ CONTAINS
             END DO
             !
          ENDIF
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
          print *, 'ahmf_bilap is', ahmf(10,10,1)
 !!         !
