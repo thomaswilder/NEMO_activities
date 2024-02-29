@@ -705,20 +705,14 @@ CONTAINS
          !
          CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
          !
-!!         !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-!!        ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! t-point
-!!         ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt ) ! f-point
-!!         !
          DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
             DO jj = 2, jpjm1
                DO ji = fs_2, fs_jpim1 ! vector opt.
-!!                     zsq2d = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-!!                        &  ddivmagsq(ji-1,jj-1,jk) ) + dzwzmagsq(ji,jj,jk)
-!!                     ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                   zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  !== CFL criterion ==!
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
                END DO
             END DO
@@ -727,21 +721,17 @@ CONTAINS
          DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
             DO jj = 1, jpjm1
                DO ji = 1, fs_jpim1 ! vector opt.
-!!                     zsq2d = r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-!!                        &  dzwzmagsq(ji+1,jj+1,jk) ) + ddivmagsq(ji,jj,jk)
-!!                     ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                   zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  !== CFL criterion ==!
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
                END DO
             END DO
          END DO
          !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
          IF( ln_dynldf_lap ) THEN
-            ! laplacian operator already computed
+            !== laplacian operator already computed ==!
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
@@ -755,12 +745,14 @@ CONTAINS
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
 !!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
-                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
             END DO
             !
          ENDIF
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:) ! can this be assigned only when GM/Redi turned on?
@@ -886,10 +878,6 @@ CONTAINS
          END DO
          !
          !== calculate viscosity coefficient ==!
-         !== stability criteria for Leith viscosity coefficient Am = delta_min^2/8*delta_T !==
-!!         ahmt_max = ( MINVAL( esqt(:,:) ) ) / ( 8.0_wp * rn_rdt )
-!!         ahmf_max = ( MINVAL( esqf(:,:) ) ) / ( 8.0_wp * rn_rdt )
-!!         !
          DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
             DO jj = 2, jpjm1
                DO ji = fs_2, fs_jpim1 ! vector opt.
@@ -900,7 +888,8 @@ CONTAINS
                   zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
                      &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
                      &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  !== CFL criterion ==!
+                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
                END DO
             END DO
@@ -914,7 +903,8 @@ CONTAINS
                   !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
                   zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
                      &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
-                  ahmf_max = ( MIN( e1f(jj,ji), e2f(jj,ji) )**2 ) / ( 8.0_wp * rn_rdt )  !! stability criterion
+                  !== CFL criterion ==!
+                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
                   ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
                END DO
             END DO
@@ -923,10 +913,8 @@ CONTAINS
 !!         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
 !!         print *, 'min ahmt is', MINVAL( ahmt(:,:,6) )
 !!         !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
          IF( ln_dynldf_lap ) THEN
-            ! laplacian operator already computed
+            !== laplacian operator already computed ==!
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
@@ -939,13 +927,15 @@ CONTAINS
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
-                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
+!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2, rn_minleith ) )
+                     ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
             END DO
             !
          ENDIF
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
 !!         print *, 'esqt is', esqt(10,10)
 !!         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
@@ -993,10 +983,9 @@ CONTAINS
       !!
       !! ** Method  :   Input instantaneous density (prd), square of buoyancy frequency (pn2), and 
       !!                gradients of vorticity (zwz + f), then compute stretching term. 
-      !!                The stretching term is then stored and remains constant for one whole day.          
-      !!
+      !!                The stretching term is then stored and remains constant for one desired timesteps.
       !! ** note    :    
-      !! ** action  :   zstlimx, zstlimy updated daily
+      !! ** action  :   zstlimx, zstlimy updated per user requirements.
       !!----------------------------------------------------------------------
       INTEGER,  INTENT(in) ::   kt   ! time step index
       REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   prd                         ! before in situ density
