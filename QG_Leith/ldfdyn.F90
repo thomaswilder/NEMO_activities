@@ -730,9 +730,8 @@ CONTAINS
             END DO
          END DO
          !
-         IF( ln_dynldf_lap ) THEN
-            !== laplacian operator already computed ==!
-         ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+         IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
@@ -741,6 +740,7 @@ CONTAINS
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) 
                   END DO
                END DO
+               !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
@@ -910,12 +910,8 @@ CONTAINS
             END DO
          END DO
          !
-!!         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
-!!         print *, 'min ahmt is', MINVAL( ahmt(:,:,6) )
-!!         !
-         IF( ln_dynldf_lap ) THEN
-            !== laplacian operator already computed ==!
-         ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+         IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
@@ -924,6 +920,7 @@ CONTAINS
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) 
                   END DO
                END DO
+               !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
@@ -937,10 +934,6 @@ CONTAINS
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
-!!         print *, 'esqt is', esqt(10,10)
-!!         print *, 'max ahmt is', MAXVAL( ahmt(:,:,6) )
-!!         print *, 'min ahmt is', MINVAL( ahmt(:,:,6) )
-!!         !
          !== assigning for output and use in step.f90 ==!
          ahm_leith(:,:,:) = ahmt(:,:,:)
          !
@@ -962,6 +955,7 @@ CONTAINS
 !!         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
          CALL iom_put( "ahmt_qg" , ahmt_qg(:,:,:) )   ! PV contribution to QG Leith T-point
          CALL iom_put( "ahmt_div", ahmt_div(:,:,:) )  ! Div contribution to QG Leith T-point
+         !
          !
       END SELECT
       !
