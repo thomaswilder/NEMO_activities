@@ -127,7 +127,9 @@ CONTAINS
       !!                  =-30 => = F(i,j,k)   = shape read in 'eddy_viscosity.nc'  file
       !!                  = 30    = F(i,j,k)   = 2D (case 20) + decrease with depth (case 10)
       !!                  = 31    = F(i,j,k,t) = F(local velocity) (  |u|e  /12   laplacian operator
-      !!                                                           or |u|e^3/12 bilaplacian operator )
+      !!                                                           or |u|e^3/12 bilaplacian operator )         
+         !
+
       !!                  = 32    = F(i,j,k,t) = F(local deformation rate and gridscale) (D and L) (Smagorinsky)  
       !!                                                           (   L^2|D|      laplacian operator
       !!                                                           or  L^4|D|/8  bilaplacian operator )
@@ -743,8 +745,6 @@ CONTAINS
             END DO
          END DO
          !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-         !
          IF( ln_dynldf_lap ) THEN
             ! laplacian operator already computed
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
@@ -766,6 +766,8 @@ CONTAINS
             END DO
             !
          ENDIF
+         !
+         CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
 !!         !
 !!         !== assigning for output and use in step.f90 ==!
 !!         ahm_leith(:,:,:) = ahmt(:,:,:) ! can this be assigned only when GM/Redi turned on?
@@ -1047,17 +1049,14 @@ CONTAINS
             END DO
          END DO
          !
-!!         print *, 'U_sc is', zusq
-!!         print *, 'ahmf_max is', ahmf_max
-!!         print *, 'ahmf_min is', ahmf_min
-!!         print *, 'ahmf_lap is', ahmf(10,10,1)
-!!         !
          IF( ln_dynldf_lap ) THEN
-            ! laplacian operator already computed
+            !== laplacian operator already computed ==!
+            !== DO NOTHING ==!
          ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            !
             DO jk = 1, jpkm1
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1
+               DO jj = 2, jpjm1
+                  DO ji = fs_2, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
 !!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
@@ -1076,11 +1075,6 @@ CONTAINS
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
          !
-!!         print *, 'ahmf_bilap is', ahmf(10,10,1)
-!!         !
-!!         !== assigning for output and use in step.f90 ==!
-!!         ahm_leith(:,:,:) = ahmt(:,:,:)
-!!         !
          !== QG Leith diagnostics ==!
          CALL iom_put( "rro2"    , rro2(:,:,:) )      ! square of Rossby number T- point
          CALL iom_put( "rbu"     , rbu(:,:,:) )       ! Burger number T- point
@@ -1099,6 +1093,7 @@ CONTAINS
 !!         CALL iom_put( "tmpzstx" , tmpzstx(:,:,:) )   ! temp QG Leith stretching term
          CALL iom_put( "ahmt_qg" , ahmt_qg(:,:,:) )   ! PV contribution to QG Leith T-point
          CALL iom_put( "ahmt_div", ahmt_div(:,:,:) )  ! Div contribution to QG Leith T-point
+         !
          !
       END SELECT
       !
