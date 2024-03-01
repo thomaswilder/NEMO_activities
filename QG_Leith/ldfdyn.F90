@@ -745,9 +745,8 @@ CONTAINS
             END DO
          END DO
          !
-         IF( ln_dynldf_lap ) THEN
-            ! laplacian operator already computed
-         ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+         IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+            !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
@@ -756,6 +755,7 @@ CONTAINS
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
+               !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
@@ -1049,10 +1049,7 @@ CONTAINS
             END DO
          END DO
          !
-         IF( ln_dynldf_lap ) THEN
-            !== laplacian operator already computed ==!
-            !== DO NOTHING ==!
-         ELSEIF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
+         IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
@@ -1062,6 +1059,7 @@ CONTAINS
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
+               !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
                      !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
