@@ -1024,7 +1024,7 @@ CONTAINS
 !!		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
                   !== Reynolds number limit ==!
 !!                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
-                  ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
+                  ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
                END DO
             END DO
          END DO
