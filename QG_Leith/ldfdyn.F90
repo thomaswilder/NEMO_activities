@@ -649,117 +649,107 @@ CONTAINS
          !
       CASE(  33  )       !==  time varying 3D field  ==!   = F( PV gradient, divergence, and gridscale ) (2D Leith)
          !
-         ! allocate local variables !
-         zcm2dl = (1/rpi)**6        			! (1/pi)^6
-         !
-         !== calculate vertical vorticity (f + zeta) on f-point ==!
-         DO jk = 1, jpkm1                                 ! Horizontal slab
-            DO jj = 1, jpjm1
-               DO ji = 1, fs_jpim1   ! vector opt.
-                  zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
-                     &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-               END DO
-            END DO
-         END DO
-         !
-         !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
-         DO jk = 1, jpkm1
-            DO jj = 2, jpjm1
-               DO ji = 2, jpim1
-                  zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                     &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                  zwzdx(ji,jj,jk) = zztmpx
-                  zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                     &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
-                  zwzdy(ji,jj,jk) = zztmpy
-                  dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-               END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
-         !
-         DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
-            DO jj = 2, jpjm1
-               DO ji = fs_2, fs_jpim1   ! vector opt.
-                  hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
-                     &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
-                     &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
-                     &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
-                     &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
-               END DO  
-            END DO  
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
-         !
-         !== calculate gradients of divergence, then square of magnitude (f-point) ==!
-         DO jk = 1, jpkm1
-            DO jj = 1, jpjm1
-               DO ji = 1, jpim1
-                  zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-                     &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
-                  hdivdx(ji,jj,jk) = zztmpx
-                  zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-                     &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
-                  hdivdy(ji,jj,jk) = zztmpy
-                  ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-               END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
-         !
-         DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
-            DO jj = 2, jpjm1
-               DO ji = fs_2, fs_jpim1 ! vector opt.
-                  zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
-                     &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                     &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  !== CFL criterion ==!
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-                  !== grid scale velocity ==!
-!!		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
-!!		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
-                  !== Reynolds number limit ==!
-!!                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
-                  ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
-                  END DO
-            END DO
-         END DO
-         !
-         DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
-            DO jj = 1, jpjm1
-               DO ji = 1, fs_jpim1 ! vector opt.
-                  zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                     &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
-                  !== CFL criterion ==!
-                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-                  !== grid scale velocity ==!
-!!		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
-!!		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
-                  !== Reynolds number limit ==!
-!!                  ahmf_min = ( zusq * MIN( e1f(ji,jj), e2f(ji,jj) ) ) * r1_2
-                  ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
-               END DO
-            END DO
-         END DO
+         IF( ln_dynldf_lap .OR. ln_dynldf_blp  ) THEN
+            !
+            ! allocate local variable 
+		      zcm2dl = (1/rpi)**6        			! (1/pi)^6
+		      !
+		      !== calculate vertical vorticity (f + zeta) on f-point ==!
+		      DO jk = 1, jpkm1                                 ! Horizontal slab
+		         DO jj = 1, jpjm1
+		            DO ji = 1, fs_jpim1   ! vector opt.
+		               zwz(ji,jj,jk) = ff_f(ji,jj) + ( e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+		                  &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+		            END DO
+		         END DO
+		      END DO
+		      !
+		      !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
+		      DO jk = 1, jpkm1
+		         DO jj = 2, jpjm1
+		            DO ji = 2, jpim1
+		               zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+		                  &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+		               zwzdx(ji,jj,jk) = zztmpx
+		               zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+		                  &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+		               zwzdy(ji,jj,jk) = zztmpy
+		               dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		            END DO
+		         END DO
+		      END DO
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
+		      !
+		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
+		         DO jj = 2, jpjm1
+		            DO ji = fs_2, fs_jpim1   ! vector opt.
+		               hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+		                  &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+		                  &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+		                  &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+		                  &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
+		            END DO  
+		         END DO  
+		      END DO
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+		      !
+		      !== calculate gradients of divergence, then square of magnitude (f-point) ==!
+		      DO jk = 1, jpkm1
+		         DO jj = 1, jpjm1
+		            DO ji = 1, jpim1
+		               zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+		                  &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
+		               hdivdx(ji,jj,jk) = zztmpx
+		               zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+		                  &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
+		               hdivdy(ji,jj,jk) = zztmpy
+		               ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		            END DO
+		         END DO
+		      END DO
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
+		      !
+		      DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
+		         DO jj = 2, jpjm1
+		            DO ji = fs_2, fs_jpim1 ! vector opt.
+		               zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+		                  &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+		                  &      ddivmagsq(ji-1,jj-1,jk) ) )
+		               !== CFL criterion ==!
+		               ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+		               ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+		            END DO
+		         END DO
+		      END DO
+		      !
+		      DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
+		         DO jj = 1, jpjm1
+		            DO ji = 1, fs_jpim1 ! vector opt.
+		               zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+		                  &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
+		               !== CFL criterion ==!
+		               ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+		               ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+		            END DO
+		         END DO
+		      END DO
+		      !
+         ENDIF
          !
          IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-!!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
                !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
-!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
@@ -768,9 +758,6 @@ CONTAINS
          ENDIF
          !
          CALL lbc_lnk_multi( 'ldfdyn', ahmt, 'T', 1.,  ahmf, 'F', 1. )
-!!         !
-!!         !== assigning for output and use in step.f90 ==!
-!!         ahm_leith(:,:,:) = ahmt(:,:,:) ! can this be assigned only when GM/Redi turned on?
          !
          !== 2D Leith diagnostics ==!
          CALL iom_put( "zwzdx"   , zwzdx(:,:,:) )     ! x component of vorticity gradient T- point
@@ -781,289 +768,265 @@ CONTAINS
          !
       CASE(  34  )       !==  time varying 3D field  ==!   = F(QG PV gradient, divergence, and gridscale) (QG Leith)
          !
-         ! allocate local variables !
-         zcmqgl = (1/rpi)**6         			! (1/pi)^6
-         zqglep1 = 1.e-12_wp
-         zqglep2 = 1.e-24_wp
-         !
-         !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
-         ! initialization
-         zrho3 = 0.03_wp
-         DO jj = 1, jpj
-            DO ji = 1, jpi
-               nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
-               zztmp = gdepw_b(ji,jj,mbkt(ji,jj)+1)
-               zrho10_3(ji,jj) = zztmp
-            END DO
-         END DO 
-         !
-         ! ------------------------- !
-         ! MLD: rho = rho10m + zrho3 !
-         ! ------------------------- !
-         DO jk = jpkm1, nlb10, -1    ! loop from bottom to nlb10
-            DO jj = 1, jpj
-               DO ji = 1, jpi
-                  ikt = mbkt(ji,jj)
-                  zzdep = gdepw_b(ji,jj,jk) * tmask(ji,jj,1)
-                  zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
-                  IF( zztmp > zrho3 ) THEN
-                     zrho10_3(ji,jj) = zzdep                              ! > 0.03
-                     nmlnqg(ji,jj) = MIN(jk, ikt) + 1                     ! Mixed layer level
-                  ENDIF
-               END DO
-            END DO
-         END DO
-         !
-         !== calculate vertical vorticity (f+zeta) on f-point ==!
-         DO jk = 1, jpkm1                                 ! Horizontal slab
-            DO jj = 1, jpjm1
-               DO ji = 1, fs_jpim1   ! vector opt.
-                  zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
-                     &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
-               END DO
-            END DO
-         END DO
-         !
-         !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
-         DO jk = 1, jpkm1
-            DO jj = 2, jpjm1
-               DO ji = 2, jpim1
-                  zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-                     &                     + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
-                  zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-                     &                     + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
-               END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
-         !
-!!         !== Compute stretching term at first time step index and then at specified intervals ** runs at every timestep ** ==!
-!!         IF( kt == kit000 ) THEN       !! compute stretching subroutine
-!!            !
-!!            zstlimx(:,:,:) = 0._wp
-!!            zstlimy(:,:,:) = 0._wp
-!!            !
-!!            CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-!!            !
-!!         ELSEIF( MOD(kt-1,1) == 0 ) THEN !! need to adjust this to account for user defined timesteps per day. See if it works first.
-!!            !
-!!            CALL ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-!!            !
-!!         ENDIF
-!!         !
-		   !== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
-		   !== find buoyancy and interpolate onto w-grid ==!
-		   DO jk = 1, jpkm1
+         IF( ln_dynldf_lap .OR. ln_dynldf_blp  ) THEN
+		      !
+		      ! allocate local variables !
+		      zcmqgl = (1/rpi)**6         			! (1/pi)^6
+		      zqglep1 = 1.e-12_wp
+		      zqglep2 = 1.e-24_wp
+		      !
+		      !== Compute the mixed layer depth based on a density criteria of zrho = 0.03 (see diahth.F90) ==!
+		      ! initialization
+		      zrho3 = 0.03_wp
 		      DO jj = 1, jpj
 		         DO ji = 1, jpi
-		            IF( jk < 2 ) THEN
-		               !== buoyancy at surface ==!
-		               zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
-		            ELSE
-		               !== buoyancy below surface ==!
-		               zbuup = - grav * prd(ji,jj,jk-1)
-		               zbulw = - grav * prd(ji,jj,jk  )
-		               zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
-		            ENDIF
+		            nmlnqg(ji,jj) = mbkt(ji,jj)           ! Initialization to the number of T ocean points
+		            zztmp = gdepw_b(ji,jj,mbkt(ji,jj)+1)
+		            zrho10_3(ji,jj) = zztmp
+		         END DO
+		      END DO 
+		      !
+		      ! ------------------------- !
+		      ! MLD: rho = rho10m + zrho3 !
+		      ! ------------------------- !
+		      DO jk = jpkm1, nlb10, -1    ! loop from bottom to nlb10
+		         DO jj = 1, jpj
+		            DO ji = 1, jpi
+		               ikt = mbkt(ji,jj)
+		               zzdep = gdepw_b(ji,jj,jk) * tmask(ji,jj,1)
+		               zztmp = rhop(ji,jj,jk) - rhop(ji,jj,nla10)              ! delta rho(10m)
+		               IF( zztmp > zrho3 ) THEN
+		                  zrho10_3(ji,jj) = zzdep                              ! > 0.03
+		                  nmlnqg(ji,jj) = MIN(jk, ikt) + 1                     ! Mixed layer level
+		               ENDIF
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-		   !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
-		   DO jk = 1, jpkm1
-		      DO jj = 1, jpjm1
-		         DO ji = 1, jpim1
-		            !== gradients of buoyancy on U and V grid at w point of cell ==!
-		            zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
-		            zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
+		      !
+		      !== calculate vertical vorticity (f+zeta) on f-point ==!
+		      DO jk = 1, jpkm1                                 ! Horizontal slab
+		         DO jj = 1, jpjm1
+		            DO ji = 1, fs_jpim1   ! vector opt.
+		               zwz(ji,jj,jk) = ff_f(ji,jj) + (  e2v(ji+1,jj  ) * vb(ji+1,jj  ,jk) - e2v(ji,jj) * vb(ji,jj,jk)            &
+		                  &          - e1u(ji  ,jj+1) * ub(ji  ,jj+1,jk) + e1u(ji,jj) * ub(ji,jj,jk)  ) * r1_e1e2f(ji,jj)
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-		   CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
-		   !
-		   !== gradients of buoyancy on W- points ==!
-		   DO jk = 1, jpkm1
-		      DO jj = 2, jpjm1
-		         DO ji = 2, jpim1
-		            zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
-		            zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
+		      !
+		      !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
+		      DO jk = 1, jpkm1
+		         DO jj = 2, jpjm1
+		            DO ji = 2, jpim1
+		               zwzdx(ji,jj,jk) = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
+		                  &                     + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+		               zwzdy(ji,jj,jk) = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
+		                  &                     + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-		   CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1.  )
-		   !
-		   !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
-		   DO jk = 1, jpkm1
-		      DO jj = 1, jpj
-		         DO ji = 1, jpi
-		            !== are we below the mixed layer and above the sea floor? ==!
-		            IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
-		               !== vertical gradient of x component ==!
-		               zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
-		               zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-		               zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
-		               !== vertical gradient of y component ==!
-		               zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
-		               zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-		               zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
-		            ENDIF
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', zwzdx, 'T', 1., zwzdy, 'T', 1. )
+		      !
+				!== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
+				!== find buoyancy and interpolate onto w-grid ==!
+				DO jk = 1, jpkm1
+				   DO jj = 1, jpj
+				      DO ji = 1, jpi
+				         IF( jk < 2 ) THEN
+				            !== buoyancy at surface ==!
+				            zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
+				         ELSE
+				            !== buoyancy below surface ==!
+				            zbuup = - grav * prd(ji,jj,jk-1)
+				            zbulw = - grav * prd(ji,jj,jk  )
+				            zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
+				         ENDIF
+				      END DO
+				   END DO
+				END DO
+				!
+				!== Calculate horizontal gradients of buoyancy and put on w-grid ==!
+				DO jk = 1, jpkm1
+				   DO jj = 1, jpjm1
+				      DO ji = 1, jpim1
+				         !== gradients of buoyancy on U and V grid at w point of cell ==!
+				         zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
+				         zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
+				      END DO
+				   END DO
+				END DO
+				!
+				CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
+				!
+				!== gradients of buoyancy on W- points ==!
+				DO jk = 1, jpkm1
+				   DO jj = 2, jpjm1
+				      DO ji = 2, jpim1
+				         zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
+				         zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
+				      END DO
+				   END DO
+				END DO
+				!
+				CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1.  )
+				!
+				!== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
+				DO jk = 1, jpkm1
+				   DO jj = 1, jpj
+				      DO ji = 1, jpi
+				         !== are we below the mixed layer and above the sea floor? ==!
+				         IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
+				            !== vertical gradient of x component ==!
+				            zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
+				            zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
+				            zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
+				            !== vertical gradient of y component ==!
+				            zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
+				            zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
+				            zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
+				         ENDIF
+				      END DO
+				   END DO
+				END DO
+				!
+				!== calculate the Burger number and square of Rossby number on t-point ==!
+				!== calculate over entire domain for diagnostics ==!
+				DO jk = 1, jpkm1
+				   DO jj = 2, jpj
+				      DO ji = 2, jpi
+				         !== grid scale velocity squared ==!
+				         zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
+				            &              ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
+				         !== square of Rossby number U^2/(f^2 * A) ==!
+				         rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
+				         !== averaging square of buoyancy frequency onto t-grid ==!
+				         IF( jk < mbkt(ji,jj) ) THEN
+				            !== accounting for negative N^2 ==!
+				            znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
+				         ELSE
+				            !== stratification is continuous at bottom ==!
+				            znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
+				         ENDIF
+				         !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
+				         rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
+				            &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+				         !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
+				         rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
+				      END DO
+				   END DO
+				END DO
+				!
+				CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1., rfr2, 'T', 1. )
+				!
+				!== are we in the QG limit? Find the stretching value in x and y components ==!
+				DO jk = 1, jpkm1
+				   DO jj = 1, jpj
+				      DO ji = 1, jpi
+				         !== are we below the mixed layer and above the sea floor? ==!
+				         IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
+				            !== x component of stretching ==!
+				            zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
+				               &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+				               &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+				            zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
+				            !== y component of stretching ==!
+				            zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
+				               &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
+				               &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
+				            zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
+				         ENDIF
+				      END DO
+				   END DO
+				END DO
+				!
+		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
+		         DO jj = 2, jpjm1
+		            DO ji = fs_2, fs_jpim1   ! vector opt.
+		               hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
+		                  &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
+		                  &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
+		                  &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
+		                  &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
+		            END DO  
+		         END DO  
+		      END DO
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+		      !
+		      !== calculate gradients of divergence, then square of magnitude (f-point) ==!
+		      DO jk = 1, jpkm1
+		         DO jj = 1, jpjm1
+		            DO ji = 1, jpim1
+		               zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
+		                  &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
+		               hdivdx(ji,jj,jk) = zztmpx
+		               zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
+		                  &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
+		               hdivdy(ji,jj,jk) = zztmpy
+		               ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-		   !== calculate the Burger number and square of Rossby number on t-point ==!
-		   !== calculate over entire domain for diagnostics ==!
-		   DO jk = 1, jpkm1
-		      DO jj = 2, jpj
-		         DO ji = 2, jpi
-		            !== grid scale velocity squared ==!
-		            zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
-		               &              ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
-		            !== square of Rossby number U^2/(f^2 * A) ==!
-		            rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
-		            !== averaging square of buoyancy frequency onto t-grid ==!
-		            IF( jk < mbkt(ji,jj) ) THEN
-		               !== accounting for negative N^2 ==!
-		               znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
-		            ELSE
-		               !== stratification is continuous at bottom ==!
-		               znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
-		            ENDIF
-		            !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-		            rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
-		               &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
-		            !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
-		            rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
+		      !
+		      !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
+		      DO jk = 1, jpkm1
+		         DO jj = 1, jpj
+		            DO ji = 1, jpi
+		               zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
+		               zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
+		               dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-		   CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1., rfr2, 'T', 1. )
-		   !
-		   !== are we in the QG limit? Find the stretching value in x and y components ==!
-		   DO jk = 1, jpkm1
-		      DO jj = 1, jpj
-		         DO ji = 1, jpi
-		            !== are we below the mixed layer and above the sea floor? ==!
-		            IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
-		               !== x component of stretching ==!
-		               zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-		                  &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-		                  &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-		               zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
-		               !== y component of stretching ==!
-		               zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-		                  &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-		                  &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-		               zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
-		            ENDIF
+		      !
+		      !== calculate viscosity coefficient ==!
+		      DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
+		         DO jj = 2, jpjm1
+		            DO ji = fs_2, fs_jpim1 ! vector opt.
+		               ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
+		               ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+		                  &  ddivmagsq(ji-1,jj-1,jk) )
+		               !== Set max value on viscosity coefficient ==!
+		               zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
+		                  &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
+		                  &      ddivmagsq(ji-1,jj-1,jk) ) )
+		               !== CFL criterion ==!
+		               ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+		               ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
+		            END DO
 		         END DO
 		      END DO
-		   END DO
-		   !
-         DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
-            DO jj = 2, jpjm1
-               DO ji = fs_2, fs_jpim1   ! vector opt.
-                  hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
-                     &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
-                     &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
-                     &                 - e1v(ji,jj-1) * e3v_b(ji,jj-1,jk) * vb(ji,jj-1,jk)  )   &
-                     &                 * r1_e1e2t(ji,jj) / e3t_b(ji,jj,jk)
-               END DO  
-            END DO  
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
-         !
-         !== calculate gradients of divergence, then square of magnitude (f-point) ==!
-         DO jk = 1, jpkm1
-            DO jj = 1, jpjm1
-               DO ji = 1, jpim1
-                  zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-                     &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) ) * fmask(ji,jj,jk)
-                  hdivdx(ji,jj,jk) = zztmpx
-                  zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-                     &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) ) * fmask(ji,jj,jk)
-                  hdivdy(ji,jj,jk) = zztmpy
-                  ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-               END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1. )
-         !
-         !== square of magnitude of QG potential vorticity, see Pearson et al. (2017). On t-point ==!
-         DO jk = 1, jpkm1
-            DO jj = 1, jpj
-               DO ji = 1, jpi
-                  zztmpx = zwzdx(ji,jj,jk) + zstlimx(ji,jj,jk)
-                  zztmpy = zwzdy(ji,jj,jk) + zstlimy(ji,jj,jk)
-                  dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
-               END DO
-            END DO
-         END DO
-         !
-         !== calculate viscosity coefficient ==!
-         DO jk = 1, jpkm1	         !== QG Leith viscosity coefficient on T-point ==!
-            DO jj = 2, jpjm1
-               DO ji = fs_2, fs_jpim1 ! vector opt.
-                  ahmt_qg(ji,jj,jk) = dzwzmagsq(ji,jj,jk)
-                  ahmt_div(ji,jj,jk) = r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                     &  ddivmagsq(ji-1,jj-1,jk) )
-                  !== Set max value on viscosity coefficient ==!
-                  zsqqg = ( rn_cqgc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
-                     &    ( rn_cqgc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
-                     &      ddivmagsq(ji-1,jj-1,jk) ) )
-                  !== CFL criterion ==!
-                  ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-                  !== grid scale velocity ==!
-!!		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
-!!		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
-                  !== Reynolds number limit ==!
-!!                  ahmt_min = ( zusq * MIN( e1t(ji,jj), e2t(ji,jj) ) ) * r1_2
-                  ahmt(ji,jj,jk) = MIN( SQRT( zcmqgl * esqt(ji,jj)**3 * zsqqg ), ahmt_max )
-               END DO
-            END DO
-         END DO
-         !
-         CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
-         !
-         DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
-            DO jj = 1, jpjm1
-               DO ji = 1, fs_jpim1 ! vector opt.
-                  !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
-                  zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
-                     &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
-                  !== CFL criterion ==!
-                  ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-                  !== grid scale velocity ==!
-!!		            zusq = r1_2 * ( ( ub(ji-1,jj  ,jk) + ub(ji,jj,jk) ) +                &
-!!		               &              ( vb(ji  ,jj-1,jk) + vb(ji,jj,jk) ) )
-                  !== Reynolds number limit ==!
-!!                  ahmf_min = ( zusq * MIN( e1f(ji,jj), e2f(ji,jj) ) ) * r1_2
-                  ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
-                  END DO
-            END DO
-         END DO
+		      !
+		      CALL lbc_lnk_multi( 'ldfdyn', ahmt_qg, 'T', 1.,  ahmt_div, 'T', 1. )
+		      !
+		      DO jk = 1, jpkm1            !== QG Leith viscosity coefficient on F-point ==!
+		         DO jj = 1, jpjm1
+		            DO ji = 1, fs_jpim1 ! vector opt.
+		               !== Set max value of viscosity coefficient depending on stability criterion (Stevens, 1995) ==!
+		               zsqqg = ( rn_cqgc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
+		                  &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_cqgc_div**6 * ddivmagsq(ji,jj,jk) )
+		               !== CFL criterion ==!
+		               ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
+		               ahmf(ji,jj,jk) = MIN( SQRT( zcmqgl * esqf(ji,jj)**3 * zsqqg ), ahmf_max )
+		               END DO
+		         END DO
+		      END DO
+		      !
+         ENDIF
          !
          IF( ln_dynldf_blp ) THEN ! bilaplacian operator, ahm_lap * delta^2 / 8 (Griffies and Hallberg, 2000)
             !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-!!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 )
                   END DO
                END DO
                !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though? ==!
-!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
@@ -1103,151 +1066,6 @@ CONTAINS
       IF( ln_timing )   CALL timing_stop('ldf_dyn')
       !
    END SUBROUTINE ldf_dyn
-   
-   
-!!   SUBROUTINE ldf_dyn_str( kt, prd, pn2, zwzdx, zwzdy, nmlnqg, zstlimx, zstlimy )
-!!      !!----------------------------------------------------------------------
-!!      !!                  ***  ROUTINE ldf_dyn_str  ***
-!!      !! 
-!!      !! ** Purpose :   compute stretching term for QG Leith viscosity
-!!      !!
-!!      !! ** Method  :   Input instantaneous density (prd), square of buoyancy frequency (pn2), and 
-!!      !!                gradients of vorticity (zwz + f), then compute stretching term. 
-!!      !!                The stretching term is then stored and remains constant for one whole day.          
-!!      !!
-!!      !! ** note    :    
-!!      !! ** action  :   zstlimx, zstlimy updated daily
-!!      !!----------------------------------------------------------------------
-!!      INTEGER,  INTENT(in) ::   kt   ! time step index
-!!      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   prd                         ! before in situ density
-!!      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   pn2                         ! before Brunt-Vaisala frequency
-!!      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   zwzdx                       ! Horizontal vorticity gradient in x-direction
-!!      REAL(wp), INTENT(in),  DIMENSION(:,:,:) ::   zwzdy                       ! Horizontal vorticity gradient in y-direction
-!!      INTEGER,  INTENT(in),  DIMENSION(:,:)   ::   nmlnqg                      ! Level of mixed layer depth
-!!      REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zstlimx                     ! Stretching in x direction
-!!      REAL(wp), INTENT(out), DIMENSION(:,:,:) ::   zstlimy                     ! Stretching in y direction
-!!      !
-!!      INTEGER  ::   ji, jj, jk   ! dummy loop indices
-!!      REAL(wp) ::   zbuup, zbulw, zusq, znsq, zztmpx, zztmpy      ! local scalar (option 34)
-!!      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2                ! more local scalar (option 34)
-!!      !!----------------------------------------------------------------------
-!!      !
-!!      zqglep1 = 1.e-12_wp
-!!      zqglep2 = 1.e-24_wp
-!!      !
-!!      !== begin calculation of stretching term d/dz[(f/(N**2))*grad(b)] ==!
-!!      !== find buoyancy and interpolate onto w-grid ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 1, jpj
-!!            DO ji = 1, jpi
-!!               IF( jk < 2 ) THEN
-!!                  !== buoyancy at surface ==!
-!!                  zbu(ji,jj,jk) = - grav * prd(ji,jj,jk)
-!!               ELSE
-!!                  !== buoyancy below surface ==!
-!!                  zbuup = - grav * prd(ji,jj,jk-1)
-!!                  zbulw = - grav * prd(ji,jj,jk  )
-!!                  zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
-!!               ENDIF
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!      !== Calculate horizontal gradients of buoyancy and put on w-grid ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 1, jpjm1
-!!            DO ji = 1, jpim1
-!!               !== gradients of buoyancy on U and V grid at w point of cell ==!
-!!               zbudxup(ji,jj,jk) = r1_e1u(ji,jj) * ( zbu(ji+1,jj,jk) - zbu(ji,jj,jk) ) * umask(ji,jj,jk)
-!!               zbudyvp(ji,jj,jk) = r1_e2v(ji,jj) * ( zbu(ji,jj+1,jk) - zbu(ji,jj,jk) ) * vmask(ji,jj,jk)
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!      CALL lbc_lnk_multi( 'ldfdyn', zbudxup, 'U', 1., zbudyvp, 'V', 1. )
-!!      !
-!!      !== gradients of buoyancy on W- points ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 2, jpjm1
-!!            DO ji = 2, jpim1
-!!               zbudx(ji,jj,jk) = r1_2 * ( zbudxup(ji-1,jj,jk) + zbudxup(ji,jj,jk) ) * wmask(ji,jj,jk)
-!!               zbudy(ji,jj,jk) = r1_2 * ( zbudyvp(ji,jj-1,jk) + zbudyvp(ji,jj,jk) ) * wmask(ji,jj,jk)
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!      CALL lbc_lnk_multi( 'ldfdyn', zbudx, 'T', 1., zbudy, 'T', 1.  )
-!!      !
-!!      !== take vertical gradient and find stretching d/dz[(f * grad(b))/N^2] (t-point) ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 1, jpj
-!!            DO ji = 1, jpi
-!!               !== are we below the mixed layer and above the sea floor? ==!
-!!               IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj)  ) THEN
-!!                  !== vertical gradient of x component ==!
-!!                  zker1 = ( ff_t(ji,jj) * zbudx(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 ) 
-!!                  zker2 = ( ff_t(ji,jj) * zbudx(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 ) 
-!!                  zstx(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
-!!                  !== vertical gradient of y component ==!
-!!                  zker1 = ( ff_t(ji,jj) * zbudy(ji,jj,jk  ) ) / MAX( pn2(ji,jj,jk  ), zqglep1 )
-!!                  zker2 = ( ff_t(ji,jj) * zbudy(ji,jj,jk+1) ) / MAX( pn2(ji,jj,jk+1), zqglep1 )
-!!                  zsty(ji,jj,jk) = ( ( zker1 - zker2 ) / e3t_b(ji,jj,jk) ) * tmask(ji,jj,jk)
-!!               ENDIF
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!      !== calculate the Burger number and square of Rossby number on t-point ==!
-!!      !== calculate over entire domain for diagnostics ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 2, jpj
-!!            DO ji = 2, jpi
-!!               !== grid scale velocity squared ==!
-!!               zusq = 0.5_wp * ( ( ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + ub(ji,jj,jk) * ub(ji,jj,jk) ) +                &
-!!                  &              ( vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk) + vb(ji,jj,jk) * vb(ji,jj,jk) ) )
-!!               !== square of Rossby number U^2/(f^2 * A) ==!
-!!               rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
-!!               !== averaging square of buoyancy frequency onto t-grid ==!
-!!               IF( jk < mbkt(ji,jj) ) THEN
-!!                  !== accounting for negative N^2 ==!
-!!                  znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
-!!               ELSE
-!!                  !== stratification is continuous at bottom ==!
-!!                  znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
-!!               ENDIF
-!!               !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-!!               rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
-!!                  &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
-!!               !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
-!!               rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!      CALL lbc_lnk_multi( 'ldfdyn', rro2, 'T', 1., rbu, 'T', 1., rfr2, 'T', 1. )
-!!      !
-!!      !== are we in the QG limit? Find the stretching value in x and y components ==!
-!!      DO jk = 1, jpkm1
-!!         DO jj = 1, jpj
-!!            DO ji = 1, jpi
-!!               !== are we below the mixed layer and above the sea floor? ==!
-!!               IF( jk > nmlnqg(ji,jj) .AND. jk < mbkt(ji,jj) ) THEN
-!!                  !== x component of stretching ==!
-!!                  zztmpx = MIN( ABS( zstx(ji,jj,jk) ),                                       &
-!!                     &  ABS( ( zwzdx(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-!!                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-!!                  zstlimx(ji,jj,jk) = SIGN( zztmpx, zstx(ji,jj,jk) )
-!!                  !== y component of stretching ==!
-!!                  zztmpy = MIN( ABS( zsty(ji,jj,jk) ),                                       &
-!!                     &  ABS( ( zwzdy(ji,jj,jk) * rfr2(ji,jj,jk) ) /                          &
-!!                     &  ( rro2(ji,jj,jk) + rfr2(ji,jj,jk)**2 + zqglep2 ) ) )
-!!                  zstlimy(ji,jj,jk) = SIGN( zztmpy, zsty(ji,jj,jk) )
-!!               ENDIF
-!!            END DO
-!!         END DO
-!!      END DO
-!!      !
-!!   END SUBROUTINE ldf_dyn_str
 
    !!======================================================================
 END MODULE ldfdyn
