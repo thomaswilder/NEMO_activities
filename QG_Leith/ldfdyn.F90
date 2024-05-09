@@ -996,7 +996,7 @@ CONTAINS
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       REAL(wp) ::   zbuup, zbulw, zusq, znsq, zztmpx, zztmpy      ! local scalar (option 34)
-      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2, zztmp         ! more local scalar (option 34)
+      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2, zztmp, zbeta  ! more local scalar (option 34)
       REAL(wp), DIMENSION(jpi,jpj) ::   zwrk_2d                   ! 2D workspace
       !!----------------------------------------------------------------------
       !
@@ -1016,7 +1016,8 @@ CONTAINS
                   zbuup = - grav * prd(ji,jj,jk-1)
                   zbulw = - grav * prd(ji,jj,jk  )
                   zbu(ji,jj,jk) = 0.5_wp * ( zbuup + zbulw ) * wmask(ji,jj,jk)
-               ENDIF
+               ENDIF!
+
             END DO
          END DO
       END DO
@@ -1080,8 +1081,14 @@ CONTAINS
                   zztmp = MAX( pn2(ji,jj,jk ), zqglep1 ) * tmask(ji,jj,jk)
                ENDIF
                !== first baroclinic deformation radius, Ld ==!
-               zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
-                 &         ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( ABS(ff_t(ji,jj)) * rpi )
+               IF( gphit(ji,jj) < -5 OR. gphit(ji,jj) > 5 ) THEN ! outside equator
+                  zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
+                    &         ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( ABS(ff_t(ji,jj)) * rpi )
+               ELSE  ! inside the equator, see Chelton at al. (1998)
+                  zbeta = 2. * omega * COS( rad * gphit(ji,jj) ) / ra
+                  zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
+                    &         SQRT( ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( 2 *  zbeta * rpi ) )
+               ENDIF
             END DO
          END DO
       END DO
