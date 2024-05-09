@@ -996,7 +996,8 @@ CONTAINS
       !
       INTEGER  ::   ji, jj, jk   ! dummy loop indices
       REAL(wp) ::   zbuup, zbulw, zusq, znsq, zztmpx, zztmpy      ! local scalar (option 34)
-      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2                ! more local scalar (option 34)
+      REAL(wp) ::   zker1, zker2, zqglep1, zqglep2, zztmp         ! more local scalar (option 34)
+      REAL(wp), DIMENSION(jpi,jpj) ::   zwrk_2d                   ! 2D workspace
       !!----------------------------------------------------------------------
       !
       zqglep1 = 1.e-12_wp
@@ -1064,6 +1065,27 @@ CONTAINS
          END DO
       END DO
       !
+      !== calculate the first baroclinic deformation radius Ld = (1/abs(f)*pi)*sum(Nsq)*delta_z ==!
+      ! testing in idealised configuration which does not pass the equator
+      zwrk_2d(:,:) = 0._wp
+      DO jk = 1, jpkm1
+         DO jj = 2, jpjm1
+            DO ji = 2, jpim1
+               !== averaging square of buoyancy frequency onto t-grid ==!
+               IF( jk < mbkt(ji,jj) ) THEN
+                  !== accounting for negative N^2 ==!
+                  zztmp = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
+               ELSE
+                  !== stratification is continuous at bottom ==!
+                  zztmp = MAX( pn2(ji,jj,jk ), zqglep1 ) * tmask(ji,jj,jk)
+               ENDIF
+               !== first baroclinic deformation radius, Ld ==!
+               zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
+                 &         ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( ABS(ff_t(ji,jj)) * rpi )
+            END DO
+         END DO
+      END DO
+      !
       !== calculate the Burger number and square of Rossby number on t-point ==!
       !== calculate over entire domain for diagnostics ==!
       DO jk = 1, jpkm1
@@ -1075,16 +1097,18 @@ CONTAINS
                !== square of Rossby number U^2/(f^2 * A) ==!
                rro2(ji,jj,jk) = ( zusq / ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) ) ) * tmask(ji,jj,jk)
                !== averaging square of buoyancy frequency onto t-grid ==!
-               IF( jk < mbkt(ji,jj) ) THEN
-                  !== accounting for negative N^2 ==!
-                  znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
-               ELSE
-                  !== stratification is continuous at bottom ==!
-                  znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
-               ENDIF
+               !IF( jk < mbkt(ji,jj) ) THEN
+               !   !== accounting for negative N^2 ==!
+               !   znsq = r1_2 * ( MAX( pn2(ji,jj,jk), zqglep1 ) + MAX( pn2(ji,jj,jk+1), zqglep1 ) ) * tmask(ji,jj,jk)
+               !ELSE
+               !   !== stratification is continuous at bottom ==!
+               !   znsq = MAX( pn2(ji,jj,jk ), zqglep1 )
+               !ENDIF
                !== Burger number (N^2 * delta_z^2)/(f^2 * A) ==!
-               rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
-                  &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+               !rbu(ji,jj,jk) = ( MAX( znsq          , zqglep1 ) * e3t_b(ji,jj,jk)**2 ) /    &
+               !   &            ( MAX( ff_t(ji,jj)**2, zqglep2 ) * esqt(ji,jj) )
+               !== computing Burger number with deformation radius ==!
+               rbu(ji,jj,jk) = ( zwrk_2d(ji,jj) * zwrk_2d(ji,jj) ) / esqt(ji,jj)
                !== Froude number squared (Fr^2 = Ro^2/Bu) ==!
                rfr2(ji,jj,jk) = rro2(ji,jj,jk)/rbu(ji,jj,jk)
             END DO
