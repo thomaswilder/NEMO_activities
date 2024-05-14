@@ -723,7 +723,7 @@ CONTAINS
                      !
                      zdelta = (rn_c2dc_vor/rpi)**2 * esqt(ji,jj)
                      !
-                     ahmt(ji,jj,jk) = MAX( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d, &
+                     ahmt(ji,jj,jk) = MAX( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d), &
                         &                  SQRT( (zu2pv2_ij + zu2pv2_ij_m1) * zdelta * zstabf_lo ) ) ! Impose lower limit
 		               ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
 		               ahmt(ji,jj,jk) = MIN( ahmt(ji,jj,jk) , ahmt_max ) ! impose upper limit
@@ -743,7 +743,7 @@ CONTAINS
                      !
                      zdelta = (rn_c2dc_vor/rpi)**2 * esqf(ji,jj)
                      !
-                     ahmf(ji,jj,jk) = MAX( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d, &
+                     ahmf(ji,jj,jk) = MAX( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d), &
                         &                  SQRT( (zu2pv2_ij_p1 + zu2pv2_ij) * zdelta * zstabf_lo ) ) ! Impose lower limit
 		               ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
 		               ahmf(ji,jj,jk) = MIN( ahmf(ji,jj,jk) , ahmf_max ) ! impose upper limit
