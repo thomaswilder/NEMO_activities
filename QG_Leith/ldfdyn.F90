@@ -648,6 +648,9 @@ CONTAINS
             !
 		      ! allocate local variables !
 		      zcm2dl = (1/rpi)**6        			! (1/pi)^6
+            zztmp = (rn_c2dc_vor/rpi)**2        ! based on vorticity parameter
+            zstabf_lo = rn_minfac * rn_minfac / ( 2._wp * 12._wp * 12._wp * zztmp ) ! lower limit stability factor scaling
+            IF( ln_dynldf_blp ) zstabf_lo = ( 16._wp / 9._wp ) * zstabf_lo          ! lower limit biharmonic scaling factor
 		      !
 		      !== calculate vertical vorticity (f + zeta) on f-point ==!
 		      DO jk = 1, jpkm1                                 ! Horizontal slab
@@ -710,11 +713,20 @@ CONTAINS
 		      DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
 		         DO jj = 2, jpjm1
 		            DO ji = fs_2, fs_jpim1 ! vector opt.
+                     !
+                     zu2pv2_ij    = ub(ji  ,jj  ,jk) * ub(ji  ,jj  ,jk) + vb(ji  ,jj  ,jk) * vb(ji  ,jj  ,jk)
+                     zu2pv2_ij_m1 = ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk)
+                     !
 		               zsq2d = ( rn_c2dc_vor**6 * dzwzmagsq(ji,jj,jk) ) +                                                            &
 		                  &    ( rn_c2dc_div**6 * r1_4 * ( ddivmagsq(ji,jj,jk) + ddivmagsq(ji-1,jj,jk) + ddivmagsq(ji,jj-1,jk) +     &
 		                  &      ddivmagsq(ji-1,jj-1,jk) ) )
+                     !
+                     zdelta = (rn_c2dc_vor/rpi)**2 * esqt(ji,jj)
+                     !
+                     ahmt(ji,jj,jk) = MAX( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d, &
+                        &                  SQRT( (zu2pv2_ij + zu2pv2_ij_m1) * zdelta * zstabf_lo ) ) ! Impose lower limit
 		               ahmt_max = ( MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-		               ahmt(ji,jj,jk) = MIN( SQRT( zcm2dl * esqt(ji,jj)**3 * zsq2d ), ahmt_max )
+		               ahmt(ji,jj,jk) = MIN( ahmt(ji,jj,jk) , ahmt_max ) ! impose upper limit
 		            END DO
 		         END DO
 		      END DO
@@ -722,10 +734,19 @@ CONTAINS
 		      DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
 		         DO jj = 1, jpjm1
 		            DO ji = 1, fs_jpim1 ! vector opt.
+                     !
+                     zu2pv2_ij_p1 = ub(ji  ,jj+1,jk) * ub(ji  ,jj+1,jk) + vb(ji+1,jj  ,jk) * vb(ji+1,jj  ,jk)
+                     zu2pv2_ij    = ub(ji  ,jj  ,jk) * ub(ji  ,jj  ,jk) + vb(ji  ,jj  ,jk) * vb(ji  ,jj  ,jk)
+                     !
 		               zsq2d = ( rn_c2dc_vor**6 * r1_4 * ( dzwzmagsq(ji,jj,jk) + dzwzmagsq(ji+1,jj,jk) + dzwzmagsq(ji,jj+1,jk) +     &
 		                  &  dzwzmagsq(ji+1,jj+1,jk) ) ) + ( rn_c2dc_div**6 * ddivmagsq(ji,jj,jk) )
+                     !
+                     zdelta = (rn_c2dc_vor/rpi)**2 * esqf(ji,jj)
+                     !
+                     ahmf(ji,jj,jk) = MAX( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d, &
+                        &                  SQRT( (zu2pv2_ij_p1 + zu2pv2_ij) * zdelta * zstabf_lo ) ) ! Impose lower limit
 		               ahmf_max = ( MIN( e1f(ji,jj), e2f(ji,jj) )**2 ) / ( 8.0_wp * rn_rdt )  
-		               ahmf(ji,jj,jk) = MIN( SQRT( zcm2dl * esqf(ji,jj)**3 * zsq2d ), ahmf_max )
+		               ahmf(ji,jj,jk) = MIN( ahmf(ji,jj,jk) , ahmf_max ) ! impose upper limit
 		            END DO
 		         END DO
 		      END DO
@@ -737,16 +758,12 @@ CONTAINS
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
                   DO ji = fs_2, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-!!                     ahmt(ji,jj,jk) = SQRT( MAX( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) 
                   END DO
                END DO
                !
                DO jj = 1, jpjm1
                   DO ji = 1, fs_jpim1
-                     !== Ensuring the viscosity never gets too small, needs to be made grid aware though ==!
-!!                     ahmf(ji,jj,jk) = SQRT( MAX( r1_8 * ahmf(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2, rn_minleith ) )
                      ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
