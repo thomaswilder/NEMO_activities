@@ -1080,11 +1080,11 @@ CONTAINS
                   !== stratification is continuous at bottom ==!
                   zztmp = MAX( pn2(ji,jj,jk ), zqglep1 ) * tmask(ji,jj,jk)
                ENDIF
-               !== first baroclinic deformation radius, Ld ==!
+               !== first baroclinic deformation radius, Ld (Chelton et al., 1998) ==!
                IF( gphit(ji,jj) < -5 OR. gphit(ji,jj) > 5 ) THEN ! outside equator
                   zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
                     &         ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( ABS(ff_t(ji,jj)) * rpi )
-               ELSE  ! inside the equator, see Chelton at al. (1998)
+               ELSE  ! near the equator, see Gill (1982) - equatorial radius of deformation.
                   zbeta = 2. * omega * COS( rad * gphit(ji,jj) ) / ra
                   zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
                     &         SQRT( ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( 2 *  zbeta * rpi ) )
@@ -1144,9 +1144,6 @@ CONTAINS
             END DO
          END DO
       END DO
-!      !
-!      IF(lwp) WRITE(numout,*) 'zstlimx at (100,100,20) is', zstlimx(100,100,20)
-!      IF(lwp) WRITE(numout,*) 'zstlimy at (100,100,20) is', zstlimy(100,100,20)
       !
    END SUBROUTINE ldf_dyn_str
 
