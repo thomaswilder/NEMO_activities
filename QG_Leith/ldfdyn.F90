@@ -1081,7 +1081,7 @@ CONTAINS
                   zztmp = MAX( pn2(ji,jj,jk ), zqglep1 ) * tmask(ji,jj,jk)
                ENDIF
                !== first baroclinic deformation radius, Ld (Chelton et al., 1998) ==!
-               IF( gphit(ji,jj) < -5 OR. gphit(ji,jj) > 5 ) THEN ! outside equator
+               IF( gphit(ji,jj) < -5 .OR. gphit(ji,jj) > 5 ) THEN ! outside equator
                   zwrk_2d(ji,jj) = zwrk_2d(ji,jj) +    &
                     &         ( SQRT( zztmp ) * e3t_b(ji,jj,jk) ) / ( ABS(ff_t(ji,jj)) * rpi )
                ELSE  ! near the equator, see Gill (1982) - equatorial radius of deformation.
