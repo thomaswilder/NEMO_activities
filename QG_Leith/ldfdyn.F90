@@ -680,7 +680,7 @@ CONTAINS
 		      END DO
 		      !
             !== do not need below lbc_lnk because data is computed on inner domain ==!
-            !CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
+            CALL lbc_lnk( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
 		      !
             !== computed on inner domain ==!
 		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
@@ -695,7 +695,7 @@ CONTAINS
 		         END DO  
 		      END DO
 		      !
-		      !CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+            CALL lbc_lnk( 'ldfdyn', hdivnqg, 'T', 1. )
 		      !
             !== calculating the L,B most halo, and R,T inner domain ==!
 		      !== calculate gradients of divergence, then square of magnitude (f-point) ==!
@@ -713,7 +713,7 @@ CONTAINS
 		         END DO
 		      END DO
 		      !
-		      !CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
+		      CALL lbc_lnk( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
 		      !
 		      DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
 		         DO jj = 2, jpjm1
