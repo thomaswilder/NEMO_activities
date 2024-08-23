@@ -653,6 +653,7 @@ CONTAINS
             IF( ln_dynldf_blp ) zstabf_lo = ( 16._wp / 9._wp ) * zstabf_lo          ! lower limit biharmonic scaling factor
 		      !
 		      !== calculate vertical vorticity (f + zeta) on f-point ==!
+            !== calculated on L,B most halo and R,T inner domain point ==!
 		      DO jk = 1, jpkm1                                 ! Horizontal slab
 		         DO jj = 1, jpjm1
 		            DO ji = 1, fs_jpim1   ! vector opt.
@@ -663,6 +664,7 @@ CONTAINS
 		      END DO
 		      !
 		      !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
+            !== calculated on the inner domain ==!
 		      DO jk = 1, jpkm1
 		         DO jj = 2, jpjm1
 		            DO ji = 2, jpim1
@@ -677,8 +679,10 @@ CONTAINS
 		         END DO
 		      END DO
 		      !
-		      CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
+            !== do not need below lbc_lnk because data is computed on inner domain ==!
+            !CALL lbc_lnk_multi( 'ldfdyn', dzwzmagsq, 'T', 1., zwzdx, 'T', 1., zwzdy, 'T', 1. )
 		      !
+            !== computed on inner domain ==!
 		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
 		         DO jj = 2, jpjm1
 		            DO ji = fs_2, fs_jpim1   ! vector opt.
@@ -691,8 +695,9 @@ CONTAINS
 		         END DO  
 		      END DO
 		      !
-		      CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
+		      !CALL lbc_lnk_multi( 'ldfdyn', hdivnqg, 'T', 1. )
 		      !
+            !== calculating the L,B most halo, and R,T inner domain ==!
 		      !== calculate gradients of divergence, then square of magnitude (f-point) ==!
 		      DO jk = 1, jpkm1
 		         DO jj = 1, jpjm1
@@ -708,7 +713,7 @@ CONTAINS
 		         END DO
 		      END DO
 		      !
-		      CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
+		      !CALL lbc_lnk_multi( 'ldfdyn', ddivmagsq , 'F', 1., hdivdx, 'F', 1., hdivdy, 'F', 1. )
 		      !
 		      DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
 		         DO jj = 2, jpjm1
