@@ -685,7 +685,7 @@ CONTAINS
             !== computed on inner domain ==!
 		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
 		         DO jj = 2, jpjm1
-		            DO ji = fs_2, fs_jpim1   ! vector opt.
+		            DO ji = 2, jpim1   ! vector opt.
 		               hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
 		                  &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
 		                  &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
@@ -700,8 +700,8 @@ CONTAINS
             !== calculating the L,B most halo, and R,T inner domain ==!
 		      !== calculate gradients of divergence, then square of magnitude (f-point) ==!
 		      DO jk = 1, jpkm1
-		         DO jj = 1, jpjm1
-		            DO ji = 1, jpim1
+		         DO jj = 2, jpjm1
+		            DO ji = 2, jpim1
 		               zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
 		                  &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
 		               hdivdx(ji,jj,jk) = zztmpx
@@ -717,7 +717,7 @@ CONTAINS
 		      !
 		      DO jk = 1, jpkm1	         !== 2D Leith viscosity coefficient on T-point ==!
 		         DO jj = 2, jpjm1
-		            DO ji = fs_2, fs_jpim1 ! vector opt.
+		            DO ji = 2, jpim1 ! vector opt.
                      !
                      zu2pv2_ij    = ub(ji  ,jj  ,jk) * ub(ji  ,jj  ,jk) + vb(ji  ,jj  ,jk) * vb(ji  ,jj  ,jk)
                      zu2pv2_ij_m1 = ub(ji-1,jj  ,jk) * ub(ji-1,jj  ,jk) + vb(ji  ,jj-1,jk) * vb(ji  ,jj-1,jk)
@@ -737,8 +737,8 @@ CONTAINS
 		      END DO
 		      !
 		      DO jk = 1, jpkm1            !== 2D Leith viscosity coefficient on F-point ==!
-		         DO jj = 1, jpjm1
-		            DO ji = 1, fs_jpim1 ! vector opt.
+		         DO jj = 2, jpjm1
+		            DO ji = 2, jpim1 ! vector opt.
                      !
                      zu2pv2_ij_p1 = ub(ji  ,jj+1,jk) * ub(ji  ,jj+1,jk) + vb(ji+1,jj  ,jk) * vb(ji+1,jj  ,jk)
                      zu2pv2_ij    = ub(ji  ,jj  ,jk) * ub(ji  ,jj  ,jk) + vb(ji  ,jj  ,jk) * vb(ji  ,jj  ,jk)
@@ -762,13 +762,13 @@ CONTAINS
             !
             DO jk = 1, jpkm1
                DO jj = 2, jpjm1
-                  DO ji = fs_2, fs_jpim1
+                  DO ji = 2, jpim1
                      ahmt(ji,jj,jk) = SQRT( r1_8 * ahmt(ji,jj,jk) * MIN( e1t(ji,jj), e2t(ji,jj) )**2 ) 
                   END DO
                END DO
                !
-               DO jj = 1, jpjm1
-                  DO ji = 1, fs_jpim1
+               DO jj = 2, jpjm1
+                  DO ji = 2, jpim1
                      ahmf(ji,jj,jk) = SQRT( r1_8 * ahmf(ji,jj,jk) * MIN( e1f(ji,jj), e2f(ji,jj) )**2 )
                   END DO
                END DO
