@@ -668,13 +668,13 @@ CONTAINS
 		      DO jk = 1, jpkm1
 		         DO jj = 2, jpj
 		            DO ji = 2, jpi
-		               zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
-		                  &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
+		               zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) )  )            &
+		                  &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) )  ) )
 		               zwzdx(ji,jj,jk) = zztmpx
-		               zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) ) * umask(ji-1,jj  ,jk) )            &
-		                  &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) ) * umask(jj  ,jj  ,jk) ) )
+		               zztmpy = r1_2 * ( ( r1_e2u(ji-1,jj) * ( zwz(ji-1,jj,jk) - zwz(ji-1,jj-1,jk) )  )            &
+		                  &            + ( r1_e2u(ji  ,jj) * ( zwz(ji  ,jj,jk) - zwz(ji,jj-1  ,jk) )  ) )
 		               zwzdy(ji,jj,jk) = zztmpy
-		               dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		               dzwzmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * tmask(ji,jj,jk)
 		            END DO
 		         END DO
 		      END DO
@@ -702,13 +702,13 @@ CONTAINS
 		      DO jk = 1, jpkm1
 		         DO jj = 2, jpjm1
 		            DO ji = 2, jpim1
-		               zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) ) * umask(ji,jj+1,jk) )               &
-		                  &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) ) * umask(ji,jj  ,jk) ) )
+		               zztmpx = r1_2 * ( ( r1_e1u(ji,jj+1) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji,jj+1,jk) )  )               &
+		                  &            + ( r1_e1u(ji,jj  ) * ( hdivnqg(ji+1,jj  ,jk) - hdivnqg(ji,jj  ,jk) )  ) )
 		               hdivdx(ji,jj,jk) = zztmpx
-		               zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) ) * vmask(ji+1,jj,jk) )               &
-		                  &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) ) * vmask(jj  ,ji,jk) ) )
+		               zztmpy = r1_2 * ( ( r1_e2v(ji+1,jj) * ( hdivnqg(ji+1,jj+1,jk) - hdivnqg(ji+1,jj,jk) )  )               &
+		                  &            + ( r1_e2v(ji  ,jj) * ( hdivnqg(ji  ,jj+1,jk) - hdivnqg(ji  ,jj,jk) )  ) )
 		               hdivdy(ji,jj,jk) = zztmpy
-		               ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy )
+		               ddivmagsq(ji,jj,jk) = ( zztmpx * zztmpx + zztmpy * zztmpy ) * fmask(ji,jj,jk)
 		            END DO
 		         END DO
 		      END DO
