@@ -666,8 +666,8 @@ CONTAINS
 		      !== calculate gradients of vorticity, then square of magnitude (t-point) ==!
             !== calculated on the inner domain ==!
 		      DO jk = 1, jpkm1
-		         DO jj = 2, jpjm1
-		            DO ji = 2, jpim1
+		         DO jj = 2, jpj
+		            DO ji = 2, jpi
 		               zztmpx = r1_2 * ( ( r1_e1v(ji,jj-1) * ( zwz(ji,jj-1,jk) - zwz(ji-1,jj-1,jk) ) * vmask(ji  ,jj-1,jk) )            &
 		                  &            + ( r1_e1v(ji,jj  ) * ( zwz(ji,jj  ,jk) - zwz(ji-1,jj  ,jk) ) * vmask(ji  ,jj  ,jk) ) )
 		               zwzdx(ji,jj,jk) = zztmpx
@@ -684,8 +684,8 @@ CONTAINS
 		      !
             !== computed on inner domain ==!
 		      DO jk = 1, jpkm1                                      !==  Horizontal divergence  ==!
-		         DO jj = 2, jpjm1
-		            DO ji = 2, jpim1   ! vector opt.
+		         DO jj = 2, jpj
+		            DO ji = 2, jpi   ! vector opt.
 		               hdivnqg(ji,jj,jk) = (  e2u(ji  ,jj) * e3u_b(ji  ,jj,jk) * ub(ji  ,jj,jk)      &
 		                  &                 - e2u(ji-1,jj) * e3u_b(ji-1,jj,jk) * ub(ji-1,jj,jk)      &
 		                  &                 + e1v(ji,jj  ) * e3v_b(ji,jj  ,jk) * vb(ji,jj  ,jk)      &
